@@ -1,0 +1,14 @@
+{
+	"$schema": "https://raw.githubusercontent.com/DanielGavin/ols/master/misc/ols.schema.json",
+	"enable_hover": true,
+	"checker_args": "-target:windows_amd64",
+	"profile": "windows",
+	"profiles": [
+		{
+			"name": "windows",
+			"os": "windows",
+			"arch": "amd64",
+			"checker_path": ["."]
+		}
+	]
+}

@@ -8,25 +8,27 @@ keyboard_proc :: proc "stdcall" (
 	wParam: windows.WPARAM,
 	lParam: windows.LPARAM,
 ) -> windows.LRESULT {
-    if nCode < 0 {
-        return windows.CallNextHookEx(nil, nCode, wParam, lParam)
-    }
-    if code >= 0{
+	if nCode < 0 {
+		return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+	}
+	if nCode >= 0 {
+		if wParam == windows.WM_KEYUP {
 
-    }
+		}
+	}
 	return 1
 }
 
 error :: distinct string
 
 
-bindWinKey :: proc() -> error{
+bindWinKey :: proc() -> error {
 	hook: windows.HHOOK
 	hook = windows.SetWindowsHookExW(windows.WH_KEYBOARD_LL, keyboard_proc, nil, 0)
-    if hook == nil{
-        return "error: could not set windows hook (bindWinKey)"
-    }
-    return ""
+	if hook == nil {
+		return "error: could not set windows hook (bindWinKey)"
+	}
+	return ""
 }
 
 main :: proc() {

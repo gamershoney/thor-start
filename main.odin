@@ -7,8 +7,13 @@ import windows "core:sys/windows"
 
 main :: proc() {
 
-    
-    err := bindWinKey()
+    err := initUIAuto()
+    if err != ""{
+        fmt.println("error initUIAuto: ",err)
+        return
+    }
+    err2 := bindWinKey()
     fmt.println(err)
+    defer windows.CoUninitialize()
 
 }

@@ -14,6 +14,10 @@ main :: proc() {
     }
     err2 := bindWinKey()
     fmt.println(err)
+    err = initUIAuto()
+    if err != ""{
+        fmt.println(err)
+    }
     defer windows.CoUninitialize()
 
 }

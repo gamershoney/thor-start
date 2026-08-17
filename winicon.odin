@@ -3,12 +3,13 @@ package main
 
 import "core:fmt"
 import windows "core:sys/windows"
+foreign import OleAut32 "system:OleAut32.lib"
 
 rawCLSID: cstring16 : "{ff48dba4-60ef-4201-aa87-54103eef594e}"
 rawIID: cstring16 : "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}"
 clpointer: windows.GUID
 iuipointer: windows.IID
-
+windowhandle : cstring16 : "Shell_TrayWnd"
 wCLSID :: proc() -> ^windows.GUID {
 	clsid: windows.HRESULT = windows.CLSIDFromString(rawCLSID, &clpointer)
 
@@ -22,6 +23,16 @@ wCLSID :: proc() -> ^windows.GUID {
 IID_IUIAutomation :: proc() -> ^windows.IID {
 	iid: windows.HRESULT = windows.IIDFromString(rawIID, &iuipointer)
 	return &iuipointer
+}
+
+foreign OleAut32 {
+    SysAllocString :: proc "system"(
+        psz: ^u16,
+    ) -> windows.BSTR ---
+
+    SysFreeString :: proc "system" (
+        bstr: windows.BSTR,
+    ) ---
 }
 
 automation: ^IUIAutomation = nil
@@ -227,6 +238,7 @@ IUIAutomationElement :: struct {
 }
 
 
+
 initUIAuto :: proc() -> uiAutoErr {
 	err: uiAutoErr = ""
 	hr: windows.HRESULT = windows.CoInitialize(nil)
@@ -250,5 +262,81 @@ initUIAuto :: proc() -> uiAutoErr {
 		)
 		return err
 	}
-	return err
+
+    start_btn_txt : cstring16 = "StartButton"
+
+    bstr := SysAllocString(cast(^u16)start_btn_txt)
+    if bstr == nil {
+        err: uiAutoErr = "error on allocating Start string"
+        return err
+    }
+
+    defer SysFreeString(bstr)
+
+    value: VARIANT
+    value.vt = VT_BSTR
+    value.bstrVal = bstr
+
+    condition: ^IUIAutomationCondition = nil
+
+    hr = automation.lpvtbl.CreatePropertyCondition(
+        automation,
+        UIA_AutomationIdPropertyId,
+        value,
+        &condition,
+    )
+
+    if cast(i32)hr < 0 {
+        err = cast(uiAutoErr)fmt.tprintf(
+            "CreatePropertyContion failed: %#x",
+            cast(u32)hr
+        )
+        return err
+    }
+
+    taskbar := windows.FindWindowW(windowhandle, nil)
+    taskelement : ^IUIAutomationElement = nil
+
+    hr =automation.lpvtbl.elementfromhandle(
+        automation,
+        taskbar,
+        &taskelement
+    )
+    if cast(i32)hr < 0{
+        err = cast(uiAutoErr)fmt.tprintf(
+            "Create task handle failed %#x",cast(u32)hr
+        )
+        return err
+    }
+
+    startbtn : ^IUIAutomationElement = nil
+
+    hr = taskelement.lpvtbl.FindFirst(
+        taskelement,
+        .TreeScope_Subtree,
+        condition,
+        &startbtn
+    )
+
+    if startbtn == nil {
+    err = "FindFirst succeeded, but StartButton was not found"
+    return err
+    }
+    fmt.println("Found StartButton!")
+
+    if cast(i32)hr < 0{
+            err = cast(uiAutoErr)fmt.tprintf(
+                "Find first task failed %#x",cast(u32)hr
+            )
+            return err
+    }	
+
+    rect :^windows.RECT = nil
+    hr = startbtn.lpvtbl.get_CurrentBoundingRectangle(
+        startbtn,
+        rect
+    )
+
+    if cast(i32)hr < 0
+    return err
 }

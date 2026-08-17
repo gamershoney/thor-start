@@ -239,12 +239,14 @@ IUIAutomationElement :: struct {
 
 
 
-initUIAuto :: proc() -> uiAutoErr {
+initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
 	err: uiAutoErr = ""
+	rect :windows.RECT
+
 	hr: windows.HRESULT = windows.CoInitialize(nil)
 	if cast(i32)hr < 0 {
 		err = "error: cannot initialize com communications"
-		return err
+		return err,rect
 	}
 	hr = windows.CoCreateInstance(
 		wCLSID(),
@@ -260,7 +262,7 @@ initUIAuto :: proc() -> uiAutoErr {
 			cast(u32)hr,
 			errs,
 		)
-		return err
+		return err,rect
 	}
 
     start_btn_txt : cstring16 = "StartButton"
@@ -268,7 +270,7 @@ initUIAuto :: proc() -> uiAutoErr {
     bstr := SysAllocString(cast(^u16)start_btn_txt)
     if bstr == nil {
         err: uiAutoErr = "error on allocating Start string"
-        return err
+        return err,rect
     }
 
     defer SysFreeString(bstr)
@@ -291,7 +293,7 @@ initUIAuto :: proc() -> uiAutoErr {
             "CreatePropertyContion failed: %#x",
             cast(u32)hr
         )
-        return err
+        return err,rect
     }
 
     taskbar := windows.FindWindowW(windowhandle, nil)
@@ -306,7 +308,7 @@ initUIAuto :: proc() -> uiAutoErr {
         err = cast(uiAutoErr)fmt.tprintf(
             "Create task handle failed %#x",cast(u32)hr
         )
-        return err
+        return err,rect
     }
 
     startbtn : ^IUIAutomationElement = nil
@@ -320,7 +322,7 @@ initUIAuto :: proc() -> uiAutoErr {
 
     if startbtn == nil {
     err = "FindFirst succeeded, but StartButton was not found"
-    return err
+    return err,rect
     }
     fmt.println("Found StartButton!")
 
@@ -328,15 +330,31 @@ initUIAuto :: proc() -> uiAutoErr {
             err = cast(uiAutoErr)fmt.tprintf(
                 "Find first task failed %#x",cast(u32)hr
             )
-            return err
+            return err,rect
     }	
 
-    rect :^windows.RECT = nil
     hr = startbtn.lpvtbl.get_CurrentBoundingRectangle(
         startbtn,
-        rect
+        &rect
     )
 
-    if cast(i32)hr < 0
-    return err
+    if cast(i32)hr < 0{
+		err = cast(uiAutoErr)fmt.tprintf(
+			"Could not assign bounding rectangle: %#x",cast(u32)hr
+		)
+		return err,rect
+	}
+
+	fmt.print(rect.top,rect.bottom,rect.left,rect.right)
+    return err,rect
+}
+
+drawThorIcon :: proc(rect: windows.RECT){
+	icon : windows.HWND = windows.CreateWindowExW(
+		windows.WS_EX_LEFT,
+		nil,
+		nil,
+		
+
+	)
 }

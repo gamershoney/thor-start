@@ -349,12 +349,28 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
     return err,rect
 }
 
-drawThorIcon :: proc(rect: windows.RECT){
-	icon : windows.HWND = windows.CreateWindowExW(
-		windows.WS_EX_LEFT,
-		nil,
-		nil,
-		
+overlay :: proc "system" (
+    hwnd : windows.HWND,
+    umsg : windows.UINT,
+    wparam: windows.WPARAM,
+    lparam: windows.LPARAM
+)-> windows.LRESULT{
+    return windows.DefWindowProcW(
+        hwnd,
+        umsg,
+        wparam,
+        lparam
+    )
+}
 
-	)
+
+drawThorIcon :: proc "system" (rect: windows.RECT){
+    style := windows.WS_EX_LAYERED|windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
+    classname : cstring16 = "Thor Icon Clas"
+    instance := windows.GetModuleHandleW(nil)
+    wndClass : windows.WNDCLASSW
+    wndClass.lpszClassName = classname
+    wndClass.lpfnWndProc = overlay
+    wndClass.hInstance = cast(windows.HINSTANCE)instance
+
 }

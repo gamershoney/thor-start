@@ -27,7 +27,95 @@ IID_IUIAutomation :: proc() -> ^windows.IID {
 automation: ^IUIAutomation = nil
 uiAutoErr :: distinct string
 
-element :: ^rawptr
+
+VARTYPE :: u16
+SCODE :: i32
+DATE :: f64
+
+VARIANT_BOOL :: i16
+
+VT_BSTR :: VARTYPE(8)
+
+PROPERTYID :: i32
+
+UIA_AutomationIdPropertyId: PROPERTYID : 30011
+
+CY :: struct #raw_union {
+	int64:       i64,
+	using parts: struct {
+		Lo: u32,
+		Hi: i32,
+	},
+}
+
+BRECORD :: struct {
+	pvRecord: rawptr,
+	pRecInfo: rawptr, // IRecordInfo *
+}
+
+VARIANT_VALUE :: struct #raw_union {
+	llVal:        i64,
+	lVal:         i32,
+	bVal:         u8,
+	iVal:         i16,
+	fltVal:       f32,
+	dblVal:       f64,
+	boolVal:      VARIANT_BOOL,
+	scode:        SCODE,
+	cyVal:        CY,
+	date:         DATE,
+	bstrVal:      windows.BSTR,
+	punkVal:      ^windows.IUnknown,
+	pdispVal:     rawptr, // IDispatch *
+	parray:       rawptr, // SAFEARRAY *
+	pbVal:        ^u8,
+	piVal:        ^i16,
+	plVal:        ^i32,
+	pllVal:       ^i64,
+	pfltVal:      ^f32,
+	pdblVal:      ^f64,
+	pboolVal:     ^VARIANT_BOOL,
+	pscode:       ^SCODE,
+	pcyVal:       ^CY,
+	pdate:        ^DATE,
+	pbstrVal:     ^windows.BSTR,
+	ppunkVal:     ^^windows.IUnknown,
+	ppdispVal:    ^rawptr, // IDispatch **
+	pparray:      ^rawptr, // SAFEARRAY **
+	pvarVal:      rawptr, // VARIANT *; rawptr avoids recursive declaration trouble
+	byref:        rawptr,
+	cVal:         i8,
+	uiVal:        u16,
+	ulVal:        u32,
+	ullVal:       u64,
+	intVal:       i32,
+	uintVal:      u32,
+	pdecVal:      ^windows.DECIMAL,
+	pcVal:        ^i8,
+	puiVal:       ^u16,
+	pulVal:       ^u32,
+	pullVal:      ^u64,
+	pintVal:      ^i32,
+	puintVal:     ^u32,
+	using record: BRECORD,
+}
+
+VARIANT_BODY :: struct {
+	vt:          VARTYPE,
+	wReserved1:  u16,
+	wReserved2:  u16,
+	wReserved3:  u16,
+	using value: VARIANT_VALUE,
+}
+
+VARIANT :: struct #raw_union {
+	using body: VARIANT_BODY,
+	decVal:     windows.DECIMAL,
+}
+
+#assert(size_of(CY) == 8)
+#assert(size_of(windows.DECIMAL) == 16)
+#assert(size_of(VARIANT) == 24)
 
 IUIAutomationVTable :: struct {
 	using unknown:               windows.IUnknownVtbl,
@@ -37,7 +125,7 @@ IUIAutomationVTable :: struct {
 	elementfromhandle:           proc "system" (
 		self: ^IUIAutomation,
 		uia_hwnd: windows.HWND,
-		IUIAutomationElement: ^^IUIAutomationElement,
+		element: ^^IUIAutomationElement,
 	) -> windows.HRESULT,
 	ElementFromPoint:            rawptr,
 	GetFocusedElement:           rawptr,
@@ -57,8 +145,9 @@ IUIAutomationVTable :: struct {
 	CreateFalseCondition:        rawptr,
 	CreatePropertyCondition:     proc "system" (
 		self: ^IUIAutomation,
-		PropertyID: u32,
-    value: 
+		propertyID: PROPERTYID,
+		value: VARIANT,
+		newCondition: ^^IUIAutomationCondition,
 	) -> windows.HRESULT,
 }
 
@@ -66,7 +155,7 @@ IUIAutomation :: struct {
 	lpvtbl: ^IUIAutomationVTable,
 }
 
-TreeScope :: enum {
+TreeScope :: enum i32 {
 	TreeScope_None        = 0,
 	TreeScope_Element     = 0x1,
 	TreeScope_Children    = 0x2,

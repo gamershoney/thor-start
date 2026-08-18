@@ -2,6 +2,7 @@ package main
 
 
 import "core:fmt"
+import "base:runtime"
 import windows "core:sys/windows"
 foreign import OleAut32 "system:OleAut32.lib"
 
@@ -355,6 +356,21 @@ overlay :: proc "system" (
     wparam: windows.WPARAM,
     lparam: windows.LPARAM
 )-> windows.LRESULT{
+
+	switch umsg {
+    case windows.WM_PAINT:
+        ps: windows.PAINTSTRUCT
+        hdc := windows.BeginPaint(hwnd, &ps)
+
+        windows.FillRect(
+            hdc,
+            &ps.rcPaint,
+            windows.GetSysColorBrush(windows.COLOR_HIGHLIGHT),
+        )
+
+        windows.EndPaint(hwnd, &ps)
+        return 0
+    }
     return windows.DefWindowProcW(
         hwnd,
         umsg,
@@ -365,12 +381,57 @@ overlay :: proc "system" (
 
 
 drawThorIcon :: proc "system" (rect: windows.RECT){
-    style := windows.WS_EX_LAYERED|windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
-    classname : cstring16 = "Thor Icon Clas"
+
+	context = runtime.default_context()
+
+    style := windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
+    classname : cstring16 = "Thor Icon Class"
     instance := windows.GetModuleHandleW(nil)
     wndClass : windows.WNDCLASSW
     wndClass.lpszClassName = classname
     wndClass.lpfnWndProc = overlay
     wndClass.hInstance = cast(windows.HINSTANCE)instance
-
+	wndClass.hbrBackground = windows.GetSysColorBrush(
+		windows.COLOR_HIGHLIGHT
+	)
+	
+	atom := windows.RegisterClassW(&wndClass);
+	if atom == 0 {
+		fmt.printfln(
+        "RegisterClassW failed: %d",
+        windows.GetLastError(),
+    )
+    return
+	}
+	icon := windows.CreateWindowExW(
+		style,
+		classname,
+		"ThorIcon",
+		windows.WS_POPUP,
+		rect.left,
+		rect.top,
+		rect.right-rect.left,
+		rect.bottom -rect.top,
+		nil,
+		nil,
+		cast(windows.HINSTANCE)instance,
+		nil,
+	)
+fmt.printfln(
+    "icon hwnd=%v x=%d y=%d w=%d h=%d",
+    icon,
+    rect.left,
+    rect.top,
+    rect.right - rect.left,
+    rect.bottom - rect.top,
+)
+	if icon == nil {
+    fmt.printfln(
+        "CreateWindowExW failed: %d",
+        windows.GetLastError(),
+    )
+    return
+	}
+	windows.ShowWindow(icon,windows.SW_SHOWNOACTIVATE)
+	windows.UpdateWindow(icon)
 }

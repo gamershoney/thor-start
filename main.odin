@@ -17,8 +17,9 @@ main :: proc() {
         fmt.println(err)
     }
 	drawThorIcon(rect)
+    defer windows.CoUninitialize()
+
 	    err2 := bindWinKey()
     fmt.println(err2)
-    defer windows.CoUninitialize()
 
 }

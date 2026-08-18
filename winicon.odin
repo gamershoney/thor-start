@@ -358,18 +358,7 @@ overlay :: proc "system" (
 )-> windows.LRESULT{
 
 	switch umsg {
-    case windows.WM_PAINT:
-        ps: windows.PAINTSTRUCT
-        hdc := windows.BeginPaint(hwnd, &ps)
-
-        windows.FillRect(
-            hdc,
-            &ps.rcPaint,
-            windows.GetSysColorBrush(windows.COLOR_HIGHLIGHT),
-        )
-
-        windows.EndPaint(hwnd, &ps)
-        return 0
+  
     }
     return windows.DefWindowProcW(
         hwnd,
@@ -384,16 +373,13 @@ drawThorIcon :: proc "system" (rect: windows.RECT){
 
 	context = runtime.default_context()
 
-    style := windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
+    style :=windows.WS_EX_LAYERED| windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
     classname : cstring16 = "Thor Icon Class"
     instance := windows.GetModuleHandleW(nil)
     wndClass : windows.WNDCLASSW
     wndClass.lpszClassName = classname
     wndClass.lpfnWndProc = overlay
     wndClass.hInstance = cast(windows.HINSTANCE)instance
-	wndClass.hbrBackground = windows.GetSysColorBrush(
-		windows.COLOR_HIGHLIGHT
-	)
 	
 	atom := windows.RegisterClassW(&wndClass);
 	if atom == 0 {

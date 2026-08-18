@@ -389,6 +389,8 @@ drawThorIcon :: proc "system" (rect: windows.RECT){
     )
     return
 	}
+    width:= rect.right - rect.left
+    height := rect.bottom - rect.top
 	icon := windows.CreateWindowExW(
 		style,
 		classname,
@@ -396,8 +398,8 @@ drawThorIcon :: proc "system" (rect: windows.RECT){
 		windows.WS_POPUP,
 		rect.left,
 		rect.top,
-		rect.right-rect.left,
-		rect.bottom -rect.top,
+		width,
+		height,
 		nil,
 		nil,
 		cast(windows.HINSTANCE)instance,
@@ -418,6 +420,56 @@ fmt.printfln(
     )
     return
 	}
-	windows.ShowWindow(icon,windows.SW_SHOWNOACTIVATE)
-	windows.UpdateWindow(icon)
+
+    screen_dc := windows.GetDC(nil)
+    defer windows.ReleaseDC(nil,screen_dc)
+
+    memory_dc := windows.CreateCompatibleDC(screen_dc)
+    defer windows.DeleteDC(memory_dc)
+
+    bitmap := windows.CreateCompatibleBitmap(
+        screen_dc,
+        width,
+        height,
+
+    )
+
+    defer windows.DeleteObject(cast(windows.HGDIOBJ)bitmap)
+
+    old_bitmap := windows.SelectObject(
+        memory_dc,
+        cast(windows.HGDIOBJ)bitmap,
+    )
+
+    defer windows.SelectObject(memory_dc, old_bitmap)
+
+    local_rect := windows.RECT{
+        left = 0,
+        top = 0,
+        right = width,
+        bottom = height,
+    }
+
+    windows.FillRect(
+        memory_dc,
+        &local_rect,
+        windows.GetSysColorBrush(windows.COLOR_HIGHLIGHT)
+    )
+
+    dst := windows.POINT {
+        x = rect.left,
+        y = rect.top,
+    }
+
+    src := windows.POINT {
+        x = 0,
+        y = 0,
+    }
+
+    size := windows.SIZE {
+        cx = width,
+        cy = height,
+    }
+	
+    windows.UpdateLayeredWindow()
 }

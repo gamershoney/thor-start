@@ -5,6 +5,7 @@ import "core:fmt"
 import "base:runtime"
 import windows "core:sys/windows"
 foreign import OleAut32 "system:OleAut32.lib"
+foreign import User32 "system:User32.lib"
 
 rawCLSID: cstring16 : "{ff48dba4-60ef-4201-aa87-54103eef594e}"
 rawIID: cstring16 : "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}"
@@ -35,6 +36,25 @@ foreign OleAut32 {
         bstr: windows.BSTR,
     ) ---
 }
+
+foreign User32 {
+    UpdateLayeredWindow :: proc "system"(
+        hWnd : windows.HWND,
+        hdcDst : windows.HDC,
+        pptDst: ^windows.POINT,
+        psize: ^windows.SIZE,
+        hdcSrc: windows.HDC,
+        pptSrc: ^windows.POINT,
+        crKey: windows.COLORREF,
+        pblend: ^windows.BLENDFUNCTION,
+        dwFlags: windows.DWORD,
+    ) -> windows.BOOL ---        
+
+}
+
+ULW_COLORKEY :: windows.DWORD(0x00000001)
+ULW_ALPHA    :: windows.DWORD(0x00000002)
+ULW_OPAQUE   :: windows.DWORD(0x00000004)
 
 automation: ^IUIAutomation = nil
 uiAutoErr :: distinct string
@@ -471,5 +491,31 @@ fmt.printfln(
         cy = height,
     }
 	
-    windows.UpdateLayeredWindow()
+    blend := windows.BLENDFUNCTION{
+        BlendOp = windows.AC_SRC_OVER,
+        BlendFlags = 0,
+        SourceConstantAlpha = 255,
+        AlphaFormat = windows.AC_SRC_ALPHA,
+    }
+
+    ok := UpdateLayeredWindow(
+        icon,
+        screen_dc,
+        &dst,
+        &size,
+        memory_dc,
+        &src,
+        0,
+        &blend,
+        ULW_ALPHA
+    )
+
+    if !ok{
+        fmt.printfln("UpdateLayeredWindow failed: %d",
+        windows.GetLastError())
+    }
+    windows.ShowWindow(
+    icon,
+    windows.SW_SHOWNOACTIVATE,
+)
 }

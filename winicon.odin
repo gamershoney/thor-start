@@ -4,6 +4,8 @@ package main
 import "core:fmt"
 import "base:runtime"
 import windows "core:sys/windows"
+import "core:image"
+
 foreign import OleAut32 "system:OleAut32.lib"
 foreign import User32 "system:User32.lib"
 
@@ -446,19 +448,22 @@ fmt.printfln(
 
     memory_dc := windows.CreateCompatibleDC(screen_dc)
     defer windows.DeleteDC(memory_dc)
+
 	bitmap := cast(windows.HBITMAP)windows.LoadImageW(
 		nil,
 		"./icon.bmp",
 		windows.IMAGE_BITMAP,
 		width,
 		height,
-		windows.LR_LOADFROMFILE
+        windows.LR_LOADFROMFILE | windows.LR_CREATEDIBSECTION,
     )
 
 	if bitmap == nil {
+		errcode := windows.GetLastError()
 		fmt.printfln(
-			"LoadImageW failed: %d\n",
-			windows.GetLastError(),
+			"LoadImageW failed: %d (%#x)\n",
+			cast(u32)errcode,
+			cast(u32)errcode,
 		)
 		return
 	}
@@ -487,7 +492,12 @@ fmt.printfln(
         cy = height,
     }
 	
-
+    blend := windows.BLENDFUNCTION{
+        BlendOp             = windows.AC_SRC_OVER,
+        BlendFlags          = 0,
+        SourceConstantAlpha = 255,
+        AlphaFormat         = windows.AC_SRC_ALPHA,
+    }
 
     ok := UpdateLayeredWindow(
         icon,
@@ -497,8 +507,8 @@ fmt.printfln(
         memory_dc,
         &src,
         0,
-        nil,
-        ULW_OPAQUE
+        &blend,
+        ULW_ALPHA
     )
 
     if !ok{

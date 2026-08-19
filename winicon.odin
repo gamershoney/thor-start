@@ -447,12 +447,22 @@ fmt.printfln(
     memory_dc := windows.CreateCompatibleDC(screen_dc)
     defer windows.DeleteDC(memory_dc)
 
-    bitmap := windows.CreateCompatibleBitmap(
-        screen_dc,
-        width,
-        height,
-
+	bitmap := cast(windows.HBITMAP)windows.LoadImageW(
+		nil,
+		"./icon.bmp",
+		windows.IMAGE_BITMAP,
+		0,
+		0,
+		windows.LR_LOADFROMFILE
     )
+
+	if bitmap == nil {
+		fmt.printfln(
+			"LoadImageW failed: %d",
+			windows.GetLastError(),
+		)
+		return
+	}
 
     defer windows.DeleteObject(cast(windows.HGDIOBJ)bitmap)
 
@@ -462,19 +472,6 @@ fmt.printfln(
     )
 
     defer windows.SelectObject(memory_dc, old_bitmap)
-
-    local_rect := windows.RECT{
-        left = 0,
-        top = 0,
-        right = width,
-        bottom = height,
-    }
-
-    windows.FillRect(
-        memory_dc,
-        &local_rect,
-        windows.GetSysColorBrush(windows.COLOR_HIGHLIGHT)
-    )
 
     dst := windows.POINT {
         x = rect.left,
@@ -507,7 +504,7 @@ fmt.printfln(
         &src,
         0,
         &blend,
-        ULW_ALPHA
+        ULW_OPAQUE
     )
 
     if !ok{

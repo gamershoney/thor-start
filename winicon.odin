@@ -446,19 +446,18 @@ fmt.printfln(
 
     memory_dc := windows.CreateCompatibleDC(screen_dc)
     defer windows.DeleteDC(memory_dc)
-
 	bitmap := cast(windows.HBITMAP)windows.LoadImageW(
 		nil,
 		"./icon.bmp",
 		windows.IMAGE_BITMAP,
-		0,
-		0,
+		width,
+		height,
 		windows.LR_LOADFROMFILE
     )
 
 	if bitmap == nil {
 		fmt.printfln(
-			"LoadImageW failed: %d",
+			"LoadImageW failed: %d\n",
 			windows.GetLastError(),
 		)
 		return
@@ -488,12 +487,7 @@ fmt.printfln(
         cy = height,
     }
 	
-    blend := windows.BLENDFUNCTION{
-        BlendOp = windows.AC_SRC_OVER,
-        BlendFlags = 0,
-        SourceConstantAlpha = 255,
-        AlphaFormat = windows.AC_SRC_ALPHA,
-    }
+
 
     ok := UpdateLayeredWindow(
         icon,
@@ -503,7 +497,7 @@ fmt.printfln(
         memory_dc,
         &src,
         0,
-        &blend,
+        nil,
         ULW_OPAQUE
     )
 

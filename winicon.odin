@@ -5,6 +5,7 @@ import "core:fmt"
 import "base:runtime"
 import windows "core:sys/windows"
 import "core:image"
+import "core:image/png"
 
 foreign import OleAut32 "system:OleAut32.lib"
 foreign import User32 "system:User32.lib"
@@ -380,8 +381,20 @@ overlay :: proc "system" (
 )-> windows.LRESULT{
 
 	switch umsg {
-  
+	case windows.WM_TIMER:
+		windows.SetWindowPos(
+			hwnd,
+			windows.HWND_TOPMOST,
+			0,0,0,0,
+			windows.SWP_NOMOVE |
+			windows.SWP_NOSIZE |
+			windows.SWP_NOACTIVATE |
+			windows.SWP_SHOWWINDOW
+		)
     }
+	context = runtime.default_context()
+	fmt.println(umsg)
+
     return windows.DefWindowProcW(
         hwnd,
         umsg,
@@ -402,7 +415,10 @@ drawThorIcon :: proc "system" (rect: windows.RECT){
     wndClass.lpszClassName = classname
     wndClass.lpfnWndProc = overlay
     wndClass.hInstance = cast(windows.HINSTANCE)instance
-	
+	wndClass.hCursor = windows.LoadCursorA(
+		nil,
+		windows.IDC_ARROW
+	)
 	atom := windows.RegisterClassW(&wndClass);
 	if atom == 0 {
 		fmt.printfln(
@@ -449,14 +465,63 @@ fmt.printfln(
     memory_dc := windows.CreateCompatibleDC(screen_dc)
     defer windows.DeleteDC(memory_dc)
 
-	bitmap := cast(windows.HBITMAP)windows.LoadImageW(
+	options := image.Options{
+    .alpha_add_if_missing,
+    .alpha_premultiply,
+	}
+
+	img, err := image.load_from_file(
+		"./icon.png",
+		options,
+		context.allocator,
+	)
+	if err != nil {
+		fmt.println("Odin image load failed:", err)
+		return
+	}
+
+	defer png.destroy(img)
+
+fmt.println(
+    "width:", img.width,
+    "height:", img.height,
+    "channels:", img.channels,
+    "depth:", img.depth,
+)
+
+	bmi : windows.BITMAPINFO = {
+		bmiHeader = {
+			biSize = size_of(windows.BITMAPINFOHEADER),
+			biWidth = width,
+			biHeight = height,
+			biPlanes = 1,
+			biBitCount = 32,
+			biCompression = windows.BI_RGB
+		}
+	}
+
+	ptr : rawptr = nil
+	bitmap := windows.CreateDIBSection(
+		screen_dc,
+		&bmi,
+		windows.DIB_RGB_COLORS,
+		&ptr,
 		nil,
-		"./icon.bmp",
-		windows.IMAGE_BITMAP,
-		width,
-		height,
-        windows.LR_LOADFROMFILE | windows.LR_CREATEDIBSECTION,
-    )
+		0
+	)
+
+	dst := cast([^]u8)ptr
+	
+	pixel_count := img.width * img.height
+
+	for i in 0..<pixel_count {
+		offset := i*4
+		dst[offset + 0] = img.pixels.buf[offset + 2]
+		dst[offset + 1] = img.pixels.buf[offset + 1]
+		dst[offset + 2] = img.pixels.buf[offset + 0]
+		dst[offset + 3] = img.pixels.buf[offset + 3]
+
+	} 
 
 	if bitmap == nil {
 		errcode := windows.GetLastError()
@@ -477,12 +542,12 @@ fmt.printfln(
 
     defer windows.SelectObject(memory_dc, old_bitmap)
 
-    dst := windows.POINT {
+    dst_point := windows.POINT {
         x = rect.left,
         y = rect.top,
     }
 
-    src := windows.POINT {
+    src_point := windows.POINT {
         x = 0,
         y = 0,
     }
@@ -502,10 +567,10 @@ fmt.printfln(
     ok := UpdateLayeredWindow(
         icon,
         screen_dc,
-        &dst,
+        &dst_point,
         &size,
         memory_dc,
-        &src,
+        &src_point,
         0,
         &blend,
         ULW_ALPHA
@@ -518,5 +583,12 @@ fmt.printfln(
     windows.ShowWindow(
     icon,
     windows.SW_SHOWNOACTIVATE,
-)
+	)
+
+	windows.SetTimer(
+		icon,
+		1,
+		250,
+		nil
+	)
 }

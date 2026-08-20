@@ -6,37 +6,62 @@ import "base:runtime"
 config:: struct{
     title: cstring,
     width: i32,
-    height: i32
+    height: i32,
+    appversion: cstring
 }
 
 
 default: config = {
     title = "Thor",
     width = 400,
-    height = 600
+    height = 600,
+    appversion = "0.0.1"
 }
 
+menu :: struct {
+    conf : config,
+    wind: ^sdl.Window,
+    quit: bool
+}
 
-
-window_init :: proc "c" (){
+window_init :: proc "c" ()->^menu{
+    Menu := &menu{quit=false}
     context = runtime.default_context()
-    def := default
+    Menu.conf = default
 
     ok := sdl.Init(sdl.INIT_VIDEO)
     if !ok{
         fmt.println("error could not activate sdl")
-        return
+        return Menu
     }
 
-    window := sdl.CreateWindow(def.title,def.width,def.height,sdl.WINDOW_ALWAYS_ON_TOP)
+    window := sdl.CreateWindow(Menu.conf.title,Menu.conf.width,Menu.conf.height,sdl.WINDOW_ALWAYS_ON_TOP)
     if window == nil{
         fmt.println("error on sdl window creation")
         fmt.println(sdl.GetError())
-        return
+        return Menu
     }
+    ok = sdl.SetAppMetadata(
+        Menu.conf.title,
+        Menu.conf.appversion,
+        nil
+    )
+    Menu.wind = window
     ok = sdl.ShowWindow(window)
     if !ok{
         fmt.println("error could not activate window")
-        return
+        return Menu
     }
+
+    evnt : ^sdl.Event
+    for(!Menu.quit) {
+        for (sdl.PollEvent(evnt)){
+            if (evnt.type == sdl.EventType.QUIT){
+                Menu.quit = true
+            }
+        }
+    }
+    
+    sdl.Quit()
+    return Menu
 }

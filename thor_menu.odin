@@ -53,9 +53,10 @@ window_init :: proc "c" ()->^menu{
         return Menu
     }
 
-    evnt :=&sdl.Event{}
+    fmt.println("window initiated")
+    evnt :sdl.Event
     for(!Menu.quit) {
-        for (sdl.PollEvent(evnt)){
+        for (sdl.PollEvent(&evnt)){
             if (evnt.type == sdl.EventType.QUIT){
                 Menu.quit = true
             }

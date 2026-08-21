@@ -7,8 +7,8 @@ import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
 
 Config:: struct{
-    width: int,
-    height: int
+    width: f32,
+    height: f32
 }
 
 Window::struct{
@@ -16,7 +16,9 @@ Window::struct{
     swap_chain: ^dxgi.ISwapChain,
     device: ^d3d.IDevice,
     ctx: ^d3d.IDeviceContext,
-    backbuffer: ^rawptr,
+    backbuffer: ^d3d.ITexture2D,
+    render_target: ^d3d.IRenderTargetView,
+    viewport: d3d.VIEWPORT
 }
 
 Menu:: struct{
@@ -97,8 +99,8 @@ window_init :: proc "stdcall" ()->Menu{
         windows.WS_OVERLAPPEDWINDOW,
         windows.CW_USEDEFAULT,
         windows.CW_USEDEFAULT,
-        800,
-        600,
+        cast(i32)menu.config.width,
+        cast(i32)menu.config.height,
         nil,
         nil,
         hinstance,
@@ -145,8 +147,8 @@ window_init :: proc "stdcall" ()->Menu{
     hr = menu.window.swap_chain.GetBuffer(
         menu.window.swap_chain,
         0,
-        d3d.ITexture1D_UUID,
-        menu.window.backbuffer
+        d3d.ITexture2D_UUID,
+        cast(^rawptr)&menu.window.backbuffer
     )
 
     if windows.FAILED(hr){
@@ -158,7 +160,35 @@ window_init :: proc "stdcall" ()->Menu{
         menu.window.device,
         cast(^d3d.IResource)menu.window.backbuffer,
         nil,
-        
+        &menu.window.render_target
     )
+
+    if windows.FAILED(hr){
+        fmt.printfln("Create render target failed: 0x%08X\n", hr)
+        return Menu{}
+    }
+
+    menu.window.ctx.OMSetRenderTargets(
+        menu.window.ctx,
+        1,
+        cast([^]^d3d.IRenderTargetView)&menu.window.render_target,
+        nil
+    )
+
+    menu.window.viewport = d3d.VIEWPORT{
+        Width = menu.config.width,
+        Height = menu.config.height,
+        MinDepth = 0,
+        MaxDepth = 1,
+        TopLeftX = 0,
+        TopLeftY = 0,
+    }
+
+    menu.window.ctx.RSSetViewports(
+        menu.window.ctx,
+        1,
+        cast([^]d3d.VIEWPORT)&menu.window.viewport
+    )
+
     return menu
 }

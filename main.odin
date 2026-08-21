@@ -18,7 +18,8 @@ main :: proc() {
     }
 	drawThorIcon(rect)
     defer windows.CoUninitialize()
-    //window_init()
+    menu := window_init()
+    render_frame(menu)
 	err2 := bindWinKey()
     fmt.println(err2)
 

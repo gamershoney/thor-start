@@ -189,6 +189,21 @@ window_init :: proc "stdcall" ()->Menu{
         1,
         cast([^]d3d.VIEWPORT)&menu.window.viewport
     )
-
+    windows.ShowWindow(hwnd,1)
     return menu
+}
+
+clear_color := [4]f32{0.08,0.08,0.08,1}
+
+render_frame :: proc "system"(menu: Menu){
+    menu.window.ctx.ClearRenderTargetView(
+        menu.window.ctx,
+        menu.window.render_target,
+        &clear_color
+    )
+    menu.window.swap_chain.Present(
+        menu.window.swap_chain,
+        0,
+        dxgi.PRESENT{ }
+    )
 }

@@ -18,7 +18,8 @@ Window::struct{
     ctx: ^d3d.IDeviceContext,
     backbuffer: ^d3d.ITexture2D,
     render_target: ^d3d.IRenderTargetView,
-    viewport: d3d.VIEWPORT
+    viewport: d3d.VIEWPORT,
+    buffer: ^d3d.IBuffer
 }
 
 Menu:: struct{
@@ -93,10 +94,10 @@ window_init :: proc "stdcall" ()->Menu{
     windows.RegisterClassW(&wc)
 
     hwnd := windows.CreateWindowExW(
-        0,
+        windows.WS_EX_TOOLWINDOW |windows.WS_EX_TOPMOST,
         classname,
         "ThorStart",
-        windows.WS_OVERLAPPEDWINDOW,
+        windows.WS_VISIBLE| windows.WS_POPUP,
         windows.CW_USEDEFAULT,
         windows.CW_USEDEFAULT,
         cast(i32)menu.config.width,
@@ -180,8 +181,8 @@ window_init :: proc "stdcall" ()->Menu{
         Height = menu.config.height,
         MinDepth = 0,
         MaxDepth = 1,
-        TopLeftX = 0,
-        TopLeftY = 0,
+        TopLeftX = 200,
+        TopLeftY = 200,
     }
 
     menu.window.ctx.RSSetViewports(
@@ -195,6 +196,7 @@ window_init :: proc "stdcall" ()->Menu{
 
 clear_color := [4]f32{0.08,0.08,0.08,1}
 
+
 render_frame :: proc "system"(menu: Menu){
     menu.window.ctx.ClearRenderTargetView(
         menu.window.ctx,
@@ -206,4 +208,28 @@ render_frame :: proc "system"(menu: Menu){
         0,
         dxgi.PRESENT{ }
     )
+}
+
+Vertex :: struct {
+    position: [3]f32,
+    color: [4]f32,
+}
+
+testRect :: [3]Vertex{
+    {
+        position= {0,0,1},
+        color = {1,0,0,1}
+    },
+    {
+        position= {0,50,1},
+        color = {1,0,0,1}
+    },
+    {
+        position = {50,0,1},
+        color = {1,0,0,1}
+    }
+}
+
+init_buffer :: proc "stdcall"(menu:Menu){
+    
 }

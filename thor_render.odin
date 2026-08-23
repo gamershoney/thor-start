@@ -215,9 +215,24 @@ Vertex :: struct {
     color: [4]f32,
 }
 
-testRect :: [3]Vertex{
+
+init_buffer :: proc "stdcall"(menu:Menu){
+
+    testRect := [6]Vertex{
     {
         position= {0,0,1},
+        color = {1,0,0,1}
+    },
+    {
+        position= {0,50,1},
+        color = {1,0,0,1}
+    },
+    {
+        position = {50,0,1},
+        color = {1,0,0,1}
+    },
+    {
+        position= {50,50,1},
         color = {1,0,0,1}
     },
     {
@@ -230,6 +245,18 @@ testRect :: [3]Vertex{
     }
 }
 
-init_buffer :: proc "stdcall"(menu:Menu){
-    
+    buffer_desc := d3d.BUFFER_DESC{
+        Usage = d3d.USAGE.DEFAULT,
+        ByteWidth =  size_of(testRect) *3,
+        BindFlags = d3d.BIND_FLAGS{.VERTEX_BUFFER},
+        CPUAccessFlags = d3d.CPU_ACCESS_FLAGS{},
+        MiscFlags = d3d.RESOURCE_MISC_FLAGS{},
+    }
+
+    Init_data : d3d.SUBRESOURCE_DATA = {
+        pSysMem = &testRect,
+        SysMemPitch = 0,
+        SysMemSlicePitch = 0
+    }
+
 }

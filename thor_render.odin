@@ -19,7 +19,8 @@ Window::struct{
     backbuffer: ^d3d.ITexture2D,
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
-    buffer: ^d3d.IBuffer
+    buffer: ^d3d.IBuffer,
+    input_layout: ^d3d.IInputLayout
 }
 
 Menu:: struct{
@@ -268,9 +269,7 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         &menu.window.buffer,
     )
 
-    menu.window.device.CreateVertexShader(
-        
-    )
+    
     if windows.FAILED(hr){
         fmt.printfln("buffer creation failed: 0x%08X", hr)
         return false
@@ -278,9 +277,34 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
     return true
 }
 
+ui_vertext := #load("./ui_vertex.cso")
+
 init_layout_desc :: proc "system"(menu:^Menu){
+    desc := &[]d3d.INPUT_ELEMENT_DESC{
+        {
+            SemanticName = "POSTITION",
+            SemanticIndex = 0,
+            Format = dxgi.FORMAT.R32G32B32A32_FLOAT,
+            InputSlot = 0,
+            InputSlotClass = .VERTEX_DATA,
+            InstanceDataStepRate = 0
+        },
+        {
+            SemanticName = "COLOR",
+            SemanticIndex = 0,
+            Format = dxgi.FORMAT.R32G32B32A32_FLOAT,
+            InputSlot = 0,
+            InputSlotClass = .VERTEX_DATA,
+            InstanceDataStepRate = 0
+        }
+    }
+
     hr := menu.window.device.CreateInputLayout(
         menu.window.device,
-        
+        raw_data(desc[:]),
+        size_of(desc),
+        &ui_vertext,
+        size_of(ui_vertext),
+        &menu.window.input_layout
     )
 }

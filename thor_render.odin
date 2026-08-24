@@ -216,7 +216,9 @@ Vertex :: struct {
 }
 
 
-init_buffer :: proc "stdcall"(menu:Menu){
+init_buffer :: proc "stdcall"(menu:^Menu){
+
+    context = runtime.default_context()
 
     testRect := [6]Vertex{
     {
@@ -247,16 +249,25 @@ init_buffer :: proc "stdcall"(menu:Menu){
 
     buffer_desc := d3d.BUFFER_DESC{
         Usage = d3d.USAGE.DEFAULT,
-        ByteWidth =  size_of(testRect) *3,
+        ByteWidth =  u32(size_of(testRect)),
         BindFlags = d3d.BIND_FLAGS{.VERTEX_BUFFER},
         CPUAccessFlags = d3d.CPU_ACCESS_FLAGS{},
         MiscFlags = d3d.RESOURCE_MISC_FLAGS{},
     }
 
     Init_data : d3d.SUBRESOURCE_DATA = {
-        pSysMem = &testRect,
+        pSysMem = &testRect[0],
         SysMemPitch = 0,
         SysMemSlicePitch = 0
     }
 
+    hr := menu.window.device.CreateBuffer(
+        menu.window.device,
+        &buffer_desc,
+        &Init_data,
+        &menu.window.buffer,
+    )
+    if windows.FAILED(hr){
+        fmt.printfln("buffer creation failed: 0x%08X", hr)
+    }
 }

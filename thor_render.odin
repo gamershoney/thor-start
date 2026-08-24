@@ -267,6 +267,10 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         &Init_data,
         &menu.window.buffer,
     )
+
+    menu.window.device.CreateVertexShader(
+        
+    )
     if windows.FAILED(hr){
         fmt.printfln("buffer creation failed: 0x%08X", hr)
         return false

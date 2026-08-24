@@ -216,7 +216,7 @@ Vertex :: struct {
 }
 
 
-init_buffer :: proc "stdcall"(menu:^Menu){
+init_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
     context = runtime.default_context()
 
@@ -269,5 +269,14 @@ init_buffer :: proc "stdcall"(menu:^Menu){
     )
     if windows.FAILED(hr){
         fmt.printfln("buffer creation failed: 0x%08X", hr)
+        return false
     }
+    return true
+}
+
+init_layout_desc :: proc "system"(menu:^Menu){
+    hr := menu.window.device.CreateInputLayout(
+        menu.window.device,
+        
+    )
 }

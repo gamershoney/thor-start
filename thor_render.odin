@@ -19,7 +19,7 @@ Window::struct{
     backbuffer: ^d3d.ITexture2D,
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
-    buffer: ^d3d.IBuffer,
+    vertex_buffers: [dynamic]^d3d.IBuffer,
     input_layout: ^d3d.IInputLayout
 }
 
@@ -182,8 +182,8 @@ window_init :: proc "stdcall" ()->Menu{
         Height = menu.config.height,
         MinDepth = 0,
         MaxDepth = 1,
-        TopLeftX = 200,
-        TopLeftY = 200,
+        TopLeftX = 0,
+        TopLeftY = 0,
     }
 
     menu.window.ctx.RSSetViewports(
@@ -262,11 +262,12 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         SysMemSlicePitch = 0
     }
 
+    buffer : ^d3d.IBuffer
     hr := menu.window.device.CreateBuffer(
         menu.window.device,
         &buffer_desc,
         &Init_data,
-        &menu.window.buffer,
+        &buffer,
     )
 
     
@@ -274,20 +275,26 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         fmt.printfln("buffer creation failed: 0x%08X", hr)
         return false
     }
+
+    append(&menu.window.vertex_buffers,buffer)
+
     return true
 }
 
 ui_vertext := #load("./ui_vertex.cso")
 
-init_layout_desc :: proc "system"(menu:^Menu){
-    desc := &[]d3d.INPUT_ELEMENT_DESC{
+init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
+    context = runtime.default_context()
+
+    desc := [2]d3d.INPUT_ELEMENT_DESC{
         {
-            SemanticName = "POSTITION",
+            SemanticName = "POSITION",
             SemanticIndex = 0,
-            Format = dxgi.FORMAT.R32G32B32A32_FLOAT,
+            Format = dxgi.FORMAT.R32G32B32_FLOAT,
             InputSlot = 0,
             InputSlotClass = .VERTEX_DATA,
-            InstanceDataStepRate = 0
+            InstanceDataStepRate = 0,
+            AlignedByteOffset =0,
         },
         {
             SemanticName = "COLOR",
@@ -295,16 +302,46 @@ init_layout_desc :: proc "system"(menu:^Menu){
             Format = dxgi.FORMAT.R32G32B32A32_FLOAT,
             InputSlot = 0,
             InputSlotClass = .VERTEX_DATA,
-            InstanceDataStepRate = 0
+            InstanceDataStepRate = 0,
+            AlignedByteOffset = 12,
         }
     }
 
     hr := menu.window.device.CreateInputLayout(
         menu.window.device,
         raw_data(desc[:]),
-        size_of(desc),
-        &ui_vertext,
-        size_of(ui_vertext),
+        len(desc),
+        raw_data(ui_vertext),
+        len(ui_vertext),
         &menu.window.input_layout
     )
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateInputLayout failed: 0x%08X", hr)
+        return false
+    }
+
+    stride :u32= u32(size_of(Vertex))
+    offset :u32= 0
+    menu.window.ctx.IASetVertexBuffers(
+        menu.window.ctx,
+        0,
+        1,
+        raw_data(menu.window.vertex_buffers[:]),
+        cast([^]u32)&stride,
+        cast([^]u32)&offset,
+    )
+
+    menu.window.ctx.IASetInputLayout(
+        menu.window.ctx,
+        menu.window.input_layout,
+    )
+
+    menu.window.ctx.IASetPrimitiveTopology(
+        menu.window.ctx,
+        .TRIANGLELIST,
+    )
+
+
+    return true
 }
+

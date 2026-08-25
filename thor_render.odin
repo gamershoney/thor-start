@@ -1,5 +1,6 @@
 package main
 
+import "vendor:directx/dxc"
 import "vendor:directx/dxgi"
 import "core:fmt"
 import "base:runtime"
@@ -20,7 +21,8 @@ Window::struct{
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
     vertex_buffers: [dynamic]^d3d.IBuffer,
-    input_layout: ^d3d.IInputLayout
+    input_layout: ^d3d.IInputLayout,
+
 }
 
 Menu:: struct{
@@ -339,6 +341,16 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     menu.window.ctx.IASetPrimitiveTopology(
         menu.window.ctx,
         .TRIANGLELIST,
+    )
+
+    shader : ^d3d.IVertexShader
+
+    menu.window.device.CreateVertexShader(
+        menu.window.device,
+        raw_data(ui_vertext),
+        size_of(ui_vertext),
+        nil,
+        &shader
     )
 
 

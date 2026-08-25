@@ -17,3 +17,8 @@ VS_Output RenderV(
     
     return Output;
 }
+
+struct PS_Input{
+    float3 position : Position;
+    float4 color : 
+}

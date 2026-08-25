@@ -22,7 +22,7 @@ Window::struct{
     viewport: d3d.VIEWPORT,
     vertex_buffers: [dynamic]^d3d.IBuffer,
     input_layout: ^d3d.IInputLayout,
-
+    vertex_shader : ^d3d.IVertexShader,
 }
 
 Menu:: struct{
@@ -343,16 +343,29 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         .TRIANGLELIST,
     )
 
-    shader : ^d3d.IVertexShader
-
-    menu.window.device.CreateVertexShader(
+   hr = menu.window.device.CreateVertexShader(
         menu.window.device,
         raw_data(ui_vertext),
-        size_of(ui_vertext),
+        len(ui_vertext),
         nil,
-        &shader
+        &menu.window.vertex_shader,
     )
 
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateVertexShader failed: 0x%08X", hr)
+        return false
+    }
+
+    menu.window.ctx.VSSetShader(
+        menu.window.ctx,
+        menu.window.vertex_shader,
+        nil,
+        0
+    )
+
+    hr = menu.window.device.CreatePixelShader(
+        menu.window.device,
+    )
 
     return true
 }

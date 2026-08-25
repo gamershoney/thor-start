@@ -23,6 +23,7 @@ Window::struct{
     vertex_buffers: [dynamic]^d3d.IBuffer,
     input_layout: ^d3d.IInputLayout,
     vertex_shader : ^d3d.IVertexShader,
+    pixel_shader : ^d3d.IPixelShader,
 }
 
 Menu:: struct{
@@ -283,8 +284,8 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
     return true
 }
 
-ui_vertext := #load("./ui_vertex.cso")
-
+ui_vertex := #load("./ui_vertex.cso")
+ui_pixel := #load("./ui_pixel.cso")
 init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     context = runtime.default_context()
 
@@ -313,8 +314,8 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         menu.window.device,
         raw_data(desc[:]),
         len(desc),
-        raw_data(ui_vertext),
-        len(ui_vertext),
+        raw_data(ui_vertex),
+        len(ui_vertex),
         &menu.window.input_layout
     )
     if windows.FAILED(hr) {
@@ -345,8 +346,8 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
    hr = menu.window.device.CreateVertexShader(
         menu.window.device,
-        raw_data(ui_vertext),
-        len(ui_vertext),
+        raw_data(ui_vertex),
+        len(ui_vertex),
         nil,
         &menu.window.vertex_shader,
     )
@@ -365,8 +366,22 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
     hr = menu.window.device.CreatePixelShader(
         menu.window.device,
+        raw_data(ui_pixel),
+        len(ui_pixel),
+        nil,
+        &menu.window.pixel_shader,
     )
+    if windows.FAILED(hr) {
+        fmt.printfln("CreatePixelShader failed: 0x%08X", hr)
+        return false
+    }
 
+    menu.window.ctx.PSSetShader(
+        menu.window.ctx,
+        menu.window.pixel_shader,
+        nil,
+        0
+    )
     return true
 }
 

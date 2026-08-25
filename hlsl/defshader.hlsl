@@ -4,21 +4,20 @@ struct VS_Input {
 };
 
 struct VS_Output {
-    float3 position: SV_POSITION;
+    float4 position: POSITION;
     float4 color : COLOR;
 };
 
 VS_Output RenderV(
     VS_Input input
-): VS_Ouptut{
+){
     VS_Output Output;
     Output.position = float4(input.position, 1.0);
     Output.color = input.color;
     
     return Output;
-}
+};
 
-struct PS_Input{
-    float3 position : Position;
-    float4 color : 
+float4 RenderP(VS_Output input) :SV_Target {
+    return input.color;
 }

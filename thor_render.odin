@@ -62,7 +62,8 @@ wproc :: proc "system"(
 
 
 device_flags : d3d.CREATE_DEVICE_FLAGS ={
-    .BGRA_SUPPORT
+    .BGRA_SUPPORT,
+    .DEBUG
 }
 
 mode_desc : dxgi.MODE_DESC = {
@@ -201,18 +202,7 @@ window_init :: proc "stdcall" ()->Menu{
 clear_color := [4]f32{0.08,0.08,0.08,1}
 
 
-render_frame :: proc "system"(menu: Menu){
-    menu.window.ctx.ClearRenderTargetView(
-        menu.window.ctx,
-        menu.window.render_target,
-        &clear_color
-    )
-    menu.window.swap_chain.Present(
-        menu.window.swap_chain,
-        0,
-        dxgi.PRESENT{ }
-    )
-}
+
 
 Vertex :: struct {
     position: [3]f32,
@@ -225,31 +215,32 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
     context = runtime.default_context()
 
     testRect := [6]Vertex{
-    {
-        position= {0,0,1},
-        color = {1,0,0,1}
-    },
-    {
-        position= {0,50,1},
-        color = {1,0,0,1}
-    },
-    {
-        position = {50,0,1},
-        color = {1,0,0,1}
-    },
-    {
-        position= {50,50,1},
-        color = {1,0,0,1}
-    },
-    {
-        position= {0,50,1},
-        color = {1,0,0,1}
-    },
-    {
-        position = {50,0,1},
-        color = {1,0,0,1}
+        {
+            position = {-0.5,  0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
+        {
+            position = {-0.5, -0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
+        {
+            position = { 0.5,  0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
+
+        {
+            position = { 0.5,  0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
+        {
+            position = {-0.5, -0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
+        {
+            position = { 0.5, -0.5, 0},
+            color    = {1, 0, 0, 1},
+        },
     }
-}
 
     buffer_desc := d3d.BUFFER_DESC{
         Usage = d3d.USAGE.DEFAULT,
@@ -382,6 +373,52 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         nil,
         0
     )
+
+    raster_desc := d3d.RASTERIZER_DESC{
+    FillMode              = .SOLID,
+    CullMode              = .NONE,
+    FrontCounterClockwise = false,
+    DepthClipEnable       = true,
+    }
+
+    raster_state: ^d3d.IRasterizerState
+
+    hr = menu.window.device.CreateRasterizerState(
+        menu.window.device,
+        &raster_desc,
+        &raster_state,
+    )
+
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateRasterizerState failed: 0x%08X", hr)
+        return false
+    }
+
+    menu.window.ctx.RSSetState(
+        menu.window.ctx,
+        raster_state,
+    )
     return true
+
+
 }
 
+test_draw::proc "stdcall"(menu: ^Menu){
+    menu.window.ctx.ClearRenderTargetView(
+        menu.window.ctx,
+        menu.window.render_target,
+        &clear_color
+    )
+
+    menu.window.ctx.Draw(
+        menu.window.ctx,
+        6,
+        0
+    )
+
+    menu.window.swap_chain.Present(
+        menu.window.swap_chain,
+        0,
+        {}
+    )
+}

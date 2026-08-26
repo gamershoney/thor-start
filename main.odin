@@ -12,14 +12,20 @@ main :: proc() {
         fmt.println("error initUIAuto: ",err)
         return
     }
-
-    if err != ""{
-        fmt.println(err)
-    }
 	drawThorIcon(rect)
     defer windows.CoUninitialize()
     menu := window_init()
-    render_frame(menu)
+    ok := init_buffer(&menu)
+    if !ok{
+        fmt.println("error on init buffer")
+        return
+    }
+    ok = init_set_layout_and_buffer(&menu)
+    if !ok{
+        fmt.println("error on set layout and buffer")
+        return
+    }
+    test_draw(&menu)
 	err2 := bindWinKey()
     fmt.println(err2)
 

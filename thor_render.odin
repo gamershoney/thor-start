@@ -20,7 +20,11 @@ Window::struct{
     backbuffer: ^d3d.ITexture2D,
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
-    vertex_buffers: [dynamic]^d3d.IBuffer,
+    vertex_renderer: struct {
+            vertex_buffers: [dynamic]^d3d.IBuffer,
+            vertex_capacity: int,
+            vertices: [dynamic]Vertex,
+        },
     input_layout: ^d3d.IInputLayout,
     vertex_shader : ^d3d.IVertexShader,
     pixel_shader : ^d3d.IPixelShader,
@@ -243,10 +247,10 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
     }
 
     buffer_desc := d3d.BUFFER_DESC{
-        Usage = d3d.USAGE.DEFAULT,
-        ByteWidth =  u32(size_of(testRect)),
+        Usage = d3d.USAGE.DYNAMIC,
+        ByteWidth =  cast(u32)(menu.window.vertex_renderer.vertex_capacity * size_of(Vertex)),
         BindFlags = d3d.BIND_FLAGS{.VERTEX_BUFFER},
-        CPUAccessFlags = d3d.CPU_ACCESS_FLAGS{},
+        CPUAccessFlags = d3d.CPU_ACCESS_FLAGS{.WRITE},
         MiscFlags = d3d.RESOURCE_MISC_FLAGS{},
     }
 
@@ -270,7 +274,7 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         return false
     }
 
-    append(&menu.window.vertex_buffers,buffer)
+    append(&menu.window.vertex_renderer.vertex_buffers,buffer)
 
     return true
 }
@@ -320,7 +324,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         menu.window.ctx,
         0,
         1,
-        raw_data(menu.window.vertex_buffers[:]),
+        raw_data(menu.window.vertex_renderer.vertex_buffers[:]),
         cast([^]u32)&stride,
         cast([^]u32)&offset,
     )

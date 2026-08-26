@@ -8,5 +8,7 @@ Position:: struct{
 }
 
 draw_rect:: proc (menu:^Menu, pos:Position){
-
+    menu.window.ctx.Map(
+        
+    )
 }

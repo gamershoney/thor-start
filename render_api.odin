@@ -1,5 +1,6 @@
 package main
 
+import d3d "vendor:directx/d3d11"
 Position:: struct{
     position : [3]f32,
     width: f32,
@@ -55,6 +56,24 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
 }
 
 draw_rect:: proc (menu:^Menu, node: ^Node){
-    
+    x0 := node.bounds.x
+    y0 := node.bounds.y
+
+    x1 := node.bounds.x + node.bounds.width
+    y1 := node.bounds.y + node.bounds.height
+
+    verts := [6]Vertex{
+    {{x0, y0, 0}, node.color},
+    {{x0, y1, 0}, node.color},
+    {{x1, y0, 0}, node.color},
+
+    {{x1, y0, 0}, node.color},
+    {{x0, y1, 0}, node.color},
+    {{x1, y1, 0}, node.color},
+    }
+
+    append(&menu.window.vertex_renderer.vertices, ..verts[:])
+
 }
+
 

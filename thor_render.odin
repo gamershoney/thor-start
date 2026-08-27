@@ -7,9 +7,15 @@ import "base:runtime"
 import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
 
+
 Config:: struct{
     width: f32,
     height: f32
+}
+
+Frame_Data :: struct {
+    viewport_size : [2]f32,
+    padding : [2]f32
 }
 
 Window::struct{
@@ -21,6 +27,7 @@ Window::struct{
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
     vertex_renderer: struct {
+            frame_buffer : ^d3d.IBuffer,
             vertex_buffer: ^d3d.IBuffer,
             vertex_capacity: int,
             vertices: [dynamic]Vertex,
@@ -28,6 +35,7 @@ Window::struct{
     input_layout: ^d3d.IInputLayout,
     vertex_shader : ^d3d.IVertexShader,
     pixel_shader : ^d3d.IPixelShader,
+    frame_data : Frame_Data,
 }
 
 Menu:: struct{
@@ -370,9 +378,59 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         menu.window.ctx,
         raster_state,
     )
+
+    frame_buffer_desc := d3d.BUFFER_DESC{
+    Usage          = .DYNAMIC,
+    ByteWidth      = u32(size_of(Frame_Data)),
+    BindFlags      = {.CONSTANT_BUFFER},
+    CPUAccessFlags = {.WRITE},
+    }
+
+    menu.window.frame_data = Frame_Data{
+        viewport_size = {
+            menu.config.width,
+            menu.config.height,
+        },
+    }
+
+    init_data := d3d.SUBRESOURCE_DATA{
+        pSysMem = &menu.window.frame_data,
+    }
+
+    hr = menu.window.device.CreateBuffer(
+        menu.window.device,
+        &frame_buffer_desc,
+        nil,
+        &menu.window.vertex_renderer.frame_buffer,
+    )
+
+    
+
+    menu.window.ctx.VSSetConstantBuffers(
+        menu.window.ctx,
+        0,
+        1,
+        cast([^]^d3d.IBuffer)&menu.window.vertex_renderer.frame_buffer,   
+    )
+
     return true
 
 
+}
+
+build_frame :: proc (menu: ^Menu){
+    mapped_resource : d3d.MAPPED_SUBRESOURCE;
+    
+    hr := menu.window.ctx.Map(
+            menu.window.ctx,
+            menu.window.vertex_renderer.vertex_buffer,
+            0,
+            d3d.MAP.WRITE_DISCARD,
+            {},
+            &mapped_resource
+        )
+
+    &mapped_resource.pData = 
 }
 
 test_draw::proc "stdcall"(menu: ^Menu){

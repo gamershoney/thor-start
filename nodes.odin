@@ -9,8 +9,8 @@ Size_Mode:: enum{
 }
 
 Layout :: struct {
-    width:  f32,
-    height: f32,
+    width:  Size_Value,
+    height: Size_Value,
 
     flex_grow:   f32,
     flex_shrink: f32,
@@ -25,7 +25,7 @@ Layout :: struct {
 
 Size_Value :: struct{
     mode: Size_Mode,
-    value: Layout
+    value: f32,
 }
 
 
@@ -35,43 +35,65 @@ NodeType :: enum{
     Container = 0,
 }
 
+Rect :: struct{
+    x,y : f32,
+    width, height : f32,
+}
+
 Node :: struct{
     id: string,
     type: NodeType,
     children : [dynamic]Node,
     static: bool,
-    size: Size_Value,
-    color : color,
-    position : [2]u32,
+    layout: Layout,
+    bounds : Rect,
+    color  : Color,
 }
 
-addChild :: proc(self: ^Node, child: Node){
-    append(&self.children, child)
+addChild :: proc(parent: ^Node, child: Node){
+    append(&parent.children, child)
 }
 
-color :: [4]f32
+Color :: [4]f32
 
-color_red : color : {1,0,0,1}
-color_blue : color : {0,0,1,1}
-color_green : color : {0,1,0,1}
+color_red : Color : {1,0,0,1}
+color_blue : Color : {0,0,1,1}
+color_green : Color : {0,1,0,1}
+
+new_container :: proc(id:string, static: bool)->Node{
+    cntnr : Node = Node{
+        id = id,
+        type = .Container,
+        static = static,
+    }
+
+    return cntnr
+}
 
 init_tree:: proc()->^Node{
     main_node : ^Node = &Node{
         id = "main_node",
         type = .Container,
         static = false,
-        size = Size_Value{
-            mode = .Percent,
-            value = Layout{
-                width = 100,
-                height = 100,
-            }
-        }
+        layout = Layout{
+            width = Size_Value{
+                mode = .Percent,
+                value = 100,
+            },
+        },
+        color = color_blue,
     }
     return main_node
 }
 
+
+
 test_tree :: proc(menu : ^Menu){
     main_node := init_tree()
+    container := new_container(
+        "div1",
+        false
+    )
+    addChild(main_node,container)
 
 }

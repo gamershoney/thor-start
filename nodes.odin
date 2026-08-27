@@ -70,7 +70,7 @@ new_container :: proc(id:string, static: bool)->Node{
     return cntnr
 }
 
-init_tree:: proc()->^Node{
+init_tree:: proc(conf:Config)->^Node{
     main_node : ^Node = &Node{
         id = "main_node",
         type = .Container,
@@ -80,8 +80,18 @@ init_tree:: proc()->^Node{
                 mode = .Percent,
                 value = 100,
             },
+            height = Size_Value{
+                mode = .Percent,
+                value = 100,
+            }
         },
         color = color_blue,
+        bounds = Rect{
+            x = 0,
+            y = 0,
+            width = conf.width,
+            height = conf.height,
+        }
     }
     return main_node
 }
@@ -89,11 +99,21 @@ init_tree:: proc()->^Node{
 
 
 test_tree :: proc(menu : ^Menu){
-    main_node := init_tree()
+    main_node := init_tree(menu.config)
     container := new_container(
         "div1",
         false
     )
+    container.layout = Layout{
+        width = Size_Value{
+            mode = .Percent,
+            value = 100,
+        },
+        height = Size_Value{
+            mode = .Percent,
+            value = 100,
+        }
+    }
     addChild(main_node,container)
 
 }

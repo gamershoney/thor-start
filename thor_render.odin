@@ -21,7 +21,7 @@ Window::struct{
     render_target: ^d3d.IRenderTargetView,
     viewport: d3d.VIEWPORT,
     vertex_renderer: struct {
-            vertex_buffers: [dynamic]^d3d.IBuffer,
+            vertex_buffer: ^d3d.IBuffer,
             vertex_capacity: int,
             vertices: [dynamic]Vertex,
         },
@@ -119,18 +119,18 @@ window_init :: proc "stdcall" ()->Menu{
 
     menu.window.hwnd = hwnd
     swap_mode_desc : dxgi.SWAP_CHAIN_DESC ={
-    BufferDesc = mode_desc,
-    SampleDesc = dxgi.SAMPLE_DESC{
-        Count = 1,
-        Quality = 0
-    },
-    BufferUsage = dxgi.USAGE{
-        .RENDER_TARGET_OUTPUT
-    },
-    BufferCount = 2,
-    OutputWindow = hwnd,
-    Windowed = true,
-    SwapEffect = dxgi.SWAP_EFFECT.FLIP_DISCARD,
+        BufferDesc = mode_desc,
+        SampleDesc = dxgi.SAMPLE_DESC{
+            Count = 1,
+            Quality = 0
+        },
+        BufferUsage = dxgi.USAGE{
+            .RENDER_TARGET_OUTPUT
+        },
+        BufferCount = 2,
+        OutputWindow = hwnd,
+        Windowed = true,
+        SwapEffect = dxgi.SWAP_EFFECT.FLIP_DISCARD,
 
     }
 
@@ -218,34 +218,8 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
     context = runtime.default_context()
 
-    testRect := [6]Vertex{
-        {
-            position = {-0.5,  0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-        {
-            position = {-0.5, -0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-        {
-            position = { 0.5,  0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-
-        {
-            position = { 0.5,  0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-        {
-            position = {-0.5, -0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-        {
-            position = { 0.5, -0.5, 0},
-            color    = {1, 0, 0, 1},
-        },
-    }
-
+    
+    menu.window.vertex_renderer.vertex_capacity = 4800
     buffer_desc := d3d.BUFFER_DESC{
         Usage = d3d.USAGE.DYNAMIC,
         ByteWidth =  cast(u32)(menu.window.vertex_renderer.vertex_capacity * size_of(Vertex)),
@@ -254,18 +228,14 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         MiscFlags = d3d.RESOURCE_MISC_FLAGS{},
     }
 
-    Init_data : d3d.SUBRESOURCE_DATA = {
-        pSysMem = &testRect[0],
-        SysMemPitch = 0,
-        SysMemSlicePitch = 0
-    }
+    
 
     buffer : ^d3d.IBuffer
     hr := menu.window.device.CreateBuffer(
         menu.window.device,
         &buffer_desc,
-        &Init_data,
-        &buffer,
+        nil,
+        &menu.window.vertex_renderer.vertex_buffer,
     )
 
     
@@ -273,8 +243,6 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
         fmt.printfln("buffer creation failed: 0x%08X", hr)
         return false
     }
-
-    append(&menu.window.vertex_renderer.vertex_buffers,buffer)
 
     return true
 }
@@ -324,7 +292,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         menu.window.ctx,
         0,
         1,
-        raw_data(menu.window.vertex_renderer.vertex_buffers[:]),
+        &menu.window.vertex_renderer.vertex_buffer,
         cast([^]u32)&stride,
         cast([^]u32)&offset,
     )

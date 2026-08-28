@@ -8,9 +8,17 @@ Size_Mode:: enum{
     Flex,
 }
 
+Layout_Direction :: enum {
+    Row,
+    Column,
+}
+
 Layout :: struct {
     width:  Size_Value,
     height: Size_Value,
+
+    direction: Layout_Direction,
+    wrap: bool,
 
     flex_grow:   f32,
     flex_shrink: f32,
@@ -76,6 +84,7 @@ init_tree:: proc(conf:Config)->Node{
         type = .Container,
         static = false,
         layout = Layout{
+            direction = .Column,
             width = Size_Value{
                 mode = .Percent,
                 value = 100,
@@ -108,14 +117,30 @@ test_tree :: proc(menu : ^Menu, tree: ^Node){
     container.layout = Layout{
         width = Size_Value{
             mode = .Percent,
-            value = 100,
+            value = 50,
         },
         height = Size_Value{
             mode = .Percent,
-            value = 100,
+            value = 50,
         }
     }
     addChild(main_node,container)
 
+    container2 := new_container(
+        "div1",
+        false
+    )
+    container2.color = color_red
+    container2.layout = Layout{
+        width = Size_Value{
+            mode = .Percent,
+            value = 50,
+        },
+        height = Size_Value{
+            mode = .Percent,
+            value = 50,
+        }
+    }
+    addChild(main_node,container2)
 }
 

@@ -489,22 +489,3 @@ push_frame :: proc (menu:^Menu){
 
 }
 
-test_draw::proc "stdcall"(menu: ^Menu){
-    menu.window.ctx.ClearRenderTargetView(
-        menu.window.ctx,
-        menu.window.render_target,
-        &clear_color
-    )
-
-    menu.window.ctx.Draw(
-        menu.window.ctx,
-        6,
-        0
-    )
-
-    menu.window.swap_chain.Present(
-        menu.window.swap_chain,
-        0,
-        {}
-    )
-}

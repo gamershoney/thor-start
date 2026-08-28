@@ -26,7 +26,9 @@ main :: proc() {
         return
     }
     main := init_tree(menu.config)
-    test_tree(&menu, main)
+    test_tree(&menu, &main)
+    create_layout(&main)
+    draw_Tree(&menu, &main)
     build_frame(&menu)
     push_frame(&menu)
     err2 := bindWinKey()

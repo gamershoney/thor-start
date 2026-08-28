@@ -70,8 +70,8 @@ new_container :: proc(id:string, static: bool)->Node{
     return cntnr
 }
 
-init_tree:: proc(conf:Config)->^Node{
-    main_node : ^Node = &Node{
+init_tree:: proc(conf:Config)->Node{
+    main_node : Node = Node{
         id = "main_node",
         type = .Container,
         static = false,
@@ -104,6 +104,7 @@ test_tree :: proc(menu : ^Menu, tree: ^Node){
         "div1",
         false
     )
+    container.color = color_green
     container.layout = Layout{
         width = Size_Value{
             mode = .Percent,

@@ -17,13 +17,23 @@ create_layout :: proc(node:^Node){
     total_flex_width: f32
     total_flex_height : f32
 
+    
+    remaining_percent_width: f32 = 100
+    remaining_percent_height: f32 = 100
+
     //Get flex ratios
     for child in node.children{
         #partial switch child.layout.width.mode{
+            case .Percent:
+                remaining_percent_width += child.layout.width.value
+
             case .Flex:
                 total_flex_width += child.layout.width.value
         }
         #partial switch child.layout.height.mode{
+            case .Percent:
+                remaining_percent_height += child.layout.height.value
+
             case .Flex:
                 total_flex_height += child.layout.height.value
         }
@@ -32,6 +42,14 @@ create_layout :: proc(node:^Node){
     //Set actual space
     for &child in node.children{
         #partial switch child.layout.width.mode{
+            case .Percent:
+                if remaining_percent_width - child.layout.width.value < 0{
+                    child.bounds.width = remaining_percent_width *
+                    space.width
+                    remaining_percent_width = 0
+
+                }
+
             case .Flex:
                 child.bounds.width = (child.layout.width.value/total_flex_width) * 
                 space.width
@@ -53,6 +71,8 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
     for &child in node.children{
         draw_Tree(menu,&child)
     }
+
+
 }
 
 draw_rect:: proc (menu:^Menu, node: ^Node){

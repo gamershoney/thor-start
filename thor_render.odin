@@ -1,5 +1,6 @@
 package main
 
+import "core:crypto/_aes/ct64"
 import "vendor:directx/dxc"
 import "vendor:directx/dxgi"
 import "core:fmt"
@@ -418,9 +419,16 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
 }
 
-build_frame :: proc (menu: ^Menu){
-    mapped_resource : d3d.MAPPED_SUBRESOURCE;
-    
+build_frame :: proc (menu: ^Menu)->bool{
+    mapped_resource : d3d.MAPPED_SUBRESOURCE
+
+    vertex_count := len(menu.window.vertex_renderer.vertices)
+
+    if vertex_count > menu.window.vertex_renderer.vertex_capacity {
+        fmt.println("vertex buffer capacity exceeded")
+        return false
+    }
+
     hr := menu.window.ctx.Map(
             menu.window.ctx,
             menu.window.vertex_renderer.vertex_buffer,
@@ -429,8 +437,28 @@ build_frame :: proc (menu: ^Menu){
             {},
             &mapped_resource
         )
+    
+    if windows.FAILED(hr) {
+        fmt.printfln("BufferMap failed: 0x%08X", hr)
+        return false
+    }
 
-    &mapped_resource.pData = 
+    vert_ptr := cast([^]Vertex)mapped_resource.pData
+
+    dst := vert_ptr[:len(menu.window.vertex_renderer.vertices)]
+    copy(
+        dst,
+
+        menu.window.vertex_renderer.vertices[:]
+    )
+
+    menu.window.ctx.Unmap(
+        menu.window.ctx,
+        menu.window.vertex_renderer.vertex_buffer,
+    0)
+    
+
+    return true
 }
 
 test_draw::proc "stdcall"(menu: ^Menu){

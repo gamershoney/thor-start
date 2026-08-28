@@ -98,8 +98,8 @@ init_tree:: proc(conf:Config)->^Node{
 
 
 
-test_tree :: proc(menu : ^Menu){
-    main_node := init_tree(menu.config)
+test_tree :: proc(menu : ^Menu, tree: ^Node){
+    main_node := tree
     container := new_container(
         "div1",
         false
@@ -117,3 +117,4 @@ test_tree :: proc(menu : ^Menu){
     addChild(main_node,container)
 
 }
+

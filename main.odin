@@ -25,8 +25,11 @@ main :: proc() {
         fmt.println("error on set layout and buffer")
         return
     }
-    test_draw(&menu)
-	err2 := bindWinKey()
+    main := init_tree(menu.config)
+    test_tree(&menu, main)
+    build_frame(&menu)
+    push_frame(&menu)
+    err2 := bindWinKey()
     fmt.println(err2)
 
 }

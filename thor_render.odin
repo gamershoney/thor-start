@@ -401,7 +401,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     hr = menu.window.device.CreateBuffer(
         menu.window.device,
         &frame_buffer_desc,
-        nil,
+        &init_data,
         &menu.window.vertex_renderer.frame_buffer,
     )
 
@@ -419,10 +419,17 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
 }
 
-build_frame :: proc (menu: ^Menu)->bool{
+build_frame :: proc "system" (menu: ^Menu)->bool{
+
+    context = runtime.default_context()
+
     mapped_resource : d3d.MAPPED_SUBRESOURCE
 
     vertex_count := len(menu.window.vertex_renderer.vertices)
+
+    if vertex_count == 0 {
+        return true
+    }
 
     if vertex_count > menu.window.vertex_renderer.vertex_capacity {
         fmt.println("vertex buffer capacity exceeded")
@@ -459,6 +466,27 @@ build_frame :: proc (menu: ^Menu)->bool{
     
 
     return true
+}
+
+push_frame :: proc (menu:^Menu){
+    menu.window.ctx.ClearRenderTargetView(
+        menu.window.ctx,
+        menu.window.render_target,
+        &clear_color,
+    )
+
+    menu.window.ctx.Draw(
+        menu.window.ctx,
+        u32(len(menu.window.vertex_renderer.vertices)),
+        0,
+    )
+
+    menu.window.swap_chain.Present(
+        menu.window.swap_chain,
+        0,
+    {}
+    )
+
 }
 
 test_draw::proc "stdcall"(menu: ^Menu){

@@ -51,7 +51,7 @@ foreign User32 {
         crKey: windows.COLORREF,
         pblend: ^windows.BLENDFUNCTION,
         dwFlags: windows.DWORD,
-    ) -> windows.BOOL ---        
+    ) -> windows.BOOL ---
 
 }
 

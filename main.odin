@@ -31,6 +31,8 @@ main :: proc() {
     draw_Tree(&menu, &main)
     build_frame(&menu)
     push_frame(&menu)
+
+    get_start_apps()
     err2 := bindWinKey()
     fmt.println(err2)
 

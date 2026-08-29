@@ -41,6 +41,7 @@ Size_Value :: struct{
 
 NodeType :: enum{
     Container = 0,
+    List = 1,
 }
 
 Rect :: struct{
@@ -78,6 +79,12 @@ new_container :: proc(id:string, static: bool)->Node{
     return cntnr
 }
 
+app_list:: proc(id: string, static: bool)->Node{
+    list : Node = {}
+
+    return list
+}
+
 init_tree:: proc(conf:Config)->Node{
     main_node : Node = Node{
         id = "main_node",
@@ -104,6 +111,7 @@ init_tree:: proc(conf:Config)->Node{
     }
     return main_node
 }
+
 
 
 

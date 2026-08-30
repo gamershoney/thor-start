@@ -20,10 +20,14 @@ foreign Shell32 {
         pszPath: windows.LPCTSTR,
         dwFileAttributes: windows.DWORD,
         psfi: ^SHFILEINFOW,
-        cbFileInfo: uint,
-        uFlags: uint,
+        cbFileInfo: windows.UINT,
+        uFlags: windows.UINT,
     ) -> windows.DWORD_PTR ---
 }
+
+SHGFI_ICON      :: 0x000000100
+SHGFI_LARGEICON :: 0x000000000
+SHGFI_SMALLICON :: 0x000000001
 
 App_Entry :: struct {
     name : string,
@@ -55,11 +59,23 @@ get_start_apps :: proc()->[dynamic]App_Entry{
 
         file_info : SHFILEINFOW
         
-        path : cstring16 = cast(cstring16)info.fullpath
+        wide_path := windows.utf8_to_wstring(info.fullpath)
 
-        SHGetFileInfoW(
+        result :=  SHGetFileInfoW(
+                wide_path,
+                0,
+                &file_info,
+                windows.UINT(size_of(SHFILEINFOW)),
+                SHGFI_ICON | SHGFI_LARGEICON,
+            )
 
-        )
+            if result == 0 {
+                continue
+            }
+        
+        
+        
+
     }
 
     return entries

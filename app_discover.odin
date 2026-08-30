@@ -53,8 +53,13 @@ get_start_apps :: proc()->[dynamic]App_Entry{
             continue
         }
 
-        windows.IShell
+        file_info : SHFILEINFOW
+        
+        path : cstring16 = cast(cstring16)info.fullpath
 
+        SHGetFileInfoW(
+
+        )
     }
 
     return entries

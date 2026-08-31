@@ -1,6 +1,5 @@
 package main
 
-import "core:path"
 import "base:runtime"
 import "core:os"
 import "core:fmt"
@@ -86,7 +85,7 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
                 path = info.fullpath,
                 icon = srv
             }
-        
+        append(&entries,entry)
 
     }
 

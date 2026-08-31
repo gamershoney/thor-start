@@ -1,7 +1,6 @@
 package main
 
-import "core:crypto/_aes/ct64"
-import "vendor:directx/dxc"
+
 import "vendor:directx/dxgi"
 import "core:fmt"
 import "core:mem"

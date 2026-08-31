@@ -1,11 +1,14 @@
 package main
 
+import "core:path"
 import "base:runtime"
 import "core:os"
 import "core:fmt"
 import "core:strings"
 import "core:sys/windows"
 foreign import Shell32 "system:shell32.lib"
+import d3d "vendor:directx/d3d11"
+
 
 SHFILEINFOW :: struct {
     hIcon : windows.HICON,
@@ -31,9 +34,8 @@ SHGFI_SMALLICON :: 0x000000001
 
 App_Entry :: struct {
     name : string,
-    app_id : string,
-    parsing_name : string,
-    //icon: 
+    path : string,
+    icon: ^d3d.IShaderResourceView
 }
 
 IShellApi : struct {
@@ -78,7 +80,12 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
         srv := icon_to_texture(
                 file_info.hIcon,
                 menu)
-
+        name := info.name
+            entry := App_Entry{
+                name = name,
+                path = info.fullpath,
+                icon = srv
+            }
         
 
     }

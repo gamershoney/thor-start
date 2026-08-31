@@ -4,6 +4,7 @@ import "core:crypto/_aes/ct64"
 import "vendor:directx/dxc"
 import "vendor:directx/dxgi"
 import "core:fmt"
+import "core:mem"
 import "base:runtime"
 import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
@@ -487,5 +488,150 @@ push_frame :: proc (menu:^Menu){
     {}
     )
 
+}
+
+// The caller retains ownership of icon and owns the returned SRV reference.
+icon_to_texture :: proc "system" (
+    icon: windows.HICON,
+    menu: ^Menu,
+) -> ^d3d.IShaderResourceView {
+    context = runtime.default_context()
+
+    if icon == nil || menu == nil || menu.window.device == nil {
+        return nil
+    }
+
+    icon_info := windows.ICONINFOEXW{
+        cbSize = u32(size_of(windows.ICONINFOEXW)),
+    }
+    if !windows.GetIconInfoExW(icon, &icon_info) {
+        fmt.printfln(
+            "GetIconInfoExW failed: %d",
+            windows.GetLastError(),
+        )
+        return nil
+    }
+    defer {
+        if icon_info.hbmColor != nil {
+            windows.DeleteObject(cast(windows.HGDIOBJ)icon_info.hbmColor)
+        }
+        if icon_info.hbmMask != nil {
+            windows.DeleteObject(cast(windows.HGDIOBJ)icon_info.hbmMask)
+        }
+    }
+
+    screen_dc := windows.GetDC(nil)
+    if screen_dc == nil {
+        fmt.printfln("GetDC failed: %d", windows.GetLastError())
+        return nil
+    }
+    defer windows.ReleaseDC(nil, screen_dc)
+
+    memory_dc := windows.CreateCompatibleDC(screen_dc)
+    if memory_dc == nil {
+        fmt.printfln(
+            "CreateCompatibleDC failed: %d",
+            windows.GetLastError(),
+        )
+        return nil
+    }
+    defer windows.DeleteDC(memory_dc)
+
+    // Negative height creates a top-down BGRA bitmap, matching texture row order.
+    bmi := windows.BITMAPINFO{
+        bmiHeader = {
+            biSize = size_of(windows.BITMAPINFOHEADER),
+            biWidth = 32,
+            biHeight = -32,
+            biPlanes = 1,
+            biBitCount = 32,
+            biCompression = windows.BI_RGB,
+        },
+    }
+
+    pixels_raw: rawptr
+    bitmap := windows.CreateDIBSection(
+        screen_dc,
+        &bmi,
+        windows.DIB_RGB_COLORS,
+        &pixels_raw,
+        nil,
+        0,
+    )
+    if bitmap == nil || pixels_raw == nil {
+        fmt.printfln(
+            "CreateDIBSection failed: %d",
+            windows.GetLastError(),
+        )
+        return nil
+    }
+    defer windows.DeleteObject(cast(windows.HGDIOBJ)bitmap)
+
+    old_bitmap := windows.SelectObject(
+        memory_dc,
+        cast(windows.HGDIOBJ)bitmap,
+    )
+    if old_bitmap == nil {
+        fmt.printfln("SelectObject failed: %d", windows.GetLastError())
+        return nil
+    }
+    defer windows.SelectObject(memory_dc, old_bitmap)
+
+    pixels := cast([^]u8)pixels_raw
+    mem.zero_slice(pixels[:32 * 32 * 4])
+
+    if !windows.DrawIcon(memory_dc, 0, 0, icon) {
+        fmt.printfln("DrawIcon failed: %d", windows.GetLastError())
+        return nil
+    }
+
+    texture_desc := d3d.TEXTURE2D_DESC{
+        Width = 32,
+        Height = 32,
+        MipLevels = 1,
+        ArraySize = 1,
+        Format = .B8G8R8A8_UNORM,
+        SampleDesc = {
+            Count = 1,
+            Quality = 0,
+        },
+        Usage = .DEFAULT,
+        BindFlags = {.SHADER_RESOURCE},
+    }
+    initial_data := d3d.SUBRESOURCE_DATA{
+        pSysMem = pixels_raw,
+        SysMemPitch = 32 * 4,
+        SysMemSlicePitch = 32 * 32 * 4,
+    }
+
+    texture: ^d3d.ITexture2D
+    hr := menu.window.device.CreateTexture2D(
+        menu.window.device,
+        &texture_desc,
+        &initial_data,
+        &texture,
+    )
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateTexture2D failed: 0x%08X", cast(u32)hr)
+        return nil
+    }
+    defer texture.Release(cast(^windows.IUnknown)texture)
+
+    texture_view: ^d3d.IShaderResourceView
+    hr = menu.window.device.CreateShaderResourceView(
+        menu.window.device,
+        cast(^d3d.IResource)texture,
+        nil,
+        &texture_view,
+    )
+    if windows.FAILED(hr) {
+        fmt.printfln(
+            "CreateShaderResourceView failed: 0x%08X",
+            cast(u32)hr,
+        )
+        return nil
+    }
+
+    return texture_view
 }
 

@@ -32,7 +32,7 @@ main :: proc() {
     build_frame(&menu)
     push_frame(&menu)
 
-    get_start_apps()
+    get_start_apps(&menu)
     err2 := bindWinKey()
     fmt.println(err2)
 

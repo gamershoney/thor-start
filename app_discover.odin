@@ -41,39 +41,6 @@ IShellApi : struct {
 }
 
 
-icon_to_texture :: proc "system" (icon: windows.HICON, menu:^Menu){
-    picon := windows.PICONINFOEXW{}
-    
-    ok := windows.GetIconInfoExW(
-        icon,
-        picon
-    )
-
-    hdc := windows.GetDC(nil)
-
-    bmi : windows.BITMAPINFO = {
-        bmiHeader = {
-            biSize = size_of(windows.BITMAPINFOHEADER),
-			biWidth = 32,
-			biHeight = 32,
-			biPlanes = 1,
-			biBitCount = 32,
-			biCompression = windows.BI_RGB
-        }
-    }
-
-    ptr : rawptr = nil
-    bitmap := windows.CreateDIBSection(
-        hdc,
-        &bmi,
-        windows.DIB_RGB_COLORS,
-        &ptr,
-        nil,
-        0
-    )
-
-    
-}
 
 get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
     walker := os.walker_create("C:/ProgramData/Microsoft/Windows/Start Menu/Programs")
@@ -108,9 +75,11 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
             }
         
         
-        icon_to_texture(
-        file_info.hIcon,
-        menu)
+        srv := icon_to_texture(
+                file_info.hIcon,
+                menu)
+
+        
 
     }
 

@@ -36,6 +36,8 @@ Window::struct{
     input_layout: ^d3d.IInputLayout,
     vertex_shader : ^d3d.IVertexShader,
     pixel_shader : ^d3d.IPixelShader,
+    icon_pixel_shader : ^d3d.IPixelShader,
+    icon_sampler : ^d3d.ISamplerState,
     frame_data : Frame_Data,
 }
 
@@ -220,6 +222,7 @@ clear_color := [4]f32{0.08,0.08,0.08,1}
 Vertex :: struct {
     position: [3]f32,
     color: [4]f32,
+    uv : [2]f32,
 }
 
 
@@ -261,7 +264,7 @@ ui_pixel := #load("./ui_pixel.cso")
 init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     context = runtime.default_context()
 
-    desc := [2]d3d.INPUT_ELEMENT_DESC{
+    desc := [3]d3d.INPUT_ELEMENT_DESC{
         {
             SemanticName = "POSITION",
             SemanticIndex = 0,
@@ -279,6 +282,14 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
             InputSlotClass = .VERTEX_DATA,
             InstanceDataStepRate = 0,
             AlignedByteOffset = 12,
+        },
+        {
+            SemanticName = "TEXTCOORD",
+            SemanticIndex = 0,
+            Format = dxgi.FORMAT.R32G32_FLOAT,
+            InputSlot = 0,
+            InputSlotClass = .VERTEX_DATA,
+            AlignedByteOffset = 28,
         }
     }
 
@@ -413,6 +424,8 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         1,
         cast([^]^d3d.IBuffer)&menu.window.vertex_renderer.frame_buffer,   
     )
+
+    
 
     return true
 

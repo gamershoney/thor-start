@@ -262,6 +262,7 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
 ui_vertex := #load("./ui_vertex.cso")
 ui_pixel := #load("./ui_pixel.cso")
+icon_pixel := #load("./icon_pixel.cso")
 init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     context = runtime.default_context()
 
@@ -285,7 +286,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
             AlignedByteOffset = 12,
         },
         {
-            SemanticName = "TEXTCOORD",
+            SemanticName = "TEXCOORD",
             SemanticIndex = 0,
             Format = dxgi.FORMAT.R32G32_FLOAT,
             InputSlot = 0,
@@ -431,6 +432,19 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         AddressW = .CLAMP,
     }
 
+    hr = menu.window.device.CreateSamplerState(
+        menu.window.device,
+        &sampler_desc,
+        &menu.window.icon_sampler,
+    )
+
+    if windows.FAILED(hr) {
+        fmt.printfln(
+            "CreateSamplerState failed: 0x%08X",
+            cast(u32)hr,
+        )
+        return false
+    }
     menu.window.ctx.PSSetSamplers(
         menu.window.ctx,
         0,

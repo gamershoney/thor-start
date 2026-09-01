@@ -39,6 +39,7 @@ Window::struct{
     icon_pixel_shader : ^d3d.IPixelShader,
     icon_sampler : ^d3d.ISamplerState,
     frame_data : Frame_Data,
+    blend_state : ^d3d.IBlendState,
 }
 
 Menu:: struct{
@@ -437,6 +438,35 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         &menu.window.icon_sampler,
     )
 
+    blend_desc := d3d.BLEND_DESC{}
+
+    blend_desc.RenderTarget[0] = d3d.RENDER_TARGET_BLEND_DESC{
+        BlendEnable           = true,
+
+        SrcBlend              = .SRC_ALPHA,
+        DestBlend             = .INV_SRC_ALPHA,
+        BlendOp               = .ADD,
+
+        SrcBlendAlpha         = .ONE,
+        DestBlendAlpha        = .INV_SRC_ALPHA,
+        BlendOpAlpha          = .ADD,
+
+        RenderTargetWriteMask = 0x0f,
+    }
+
+    hr = menu.window.device.CreateBlendState(
+        menu.window.device,
+        &blend_desc,
+        &menu.window.blend_state,
+    )
+
+    if windows.FAILED(hr) {
+        fmt.printfln(
+            "CreateBlendState failed: 0x%08X",
+            cast(u32)hr,
+        )
+        return false
+    }
     return true
 
 
@@ -654,6 +684,7 @@ icon_to_texture :: proc "system" (
         return nil
     }
 
+    
     return texture_view
 }
 

@@ -19,6 +19,18 @@ Frame_Data :: struct {
     padding : [2]f32
 }
 
+Render_Kind :: enum {
+    Solid,
+    Texture,
+}
+
+Render_Command :: struct {
+    kind:         Render_Kind,
+    first_vertex: u32,
+    vertex_count: u32,
+    texture:      ^d3d.IShaderResourceView,
+}
+
 Window::struct{
     hwnd: windows.HWND,
     swap_chain: ^dxgi.ISwapChain,
@@ -32,6 +44,7 @@ Window::struct{
             vertex_buffer: ^d3d.IBuffer,
             vertex_capacity: int,
             vertices: [dynamic]Vertex,
+            commands: [dynamic]Render_Command,
         },
     input_layout: ^d3d.IInputLayout,
     vertex_shader : ^d3d.IVertexShader,

@@ -131,6 +131,7 @@ create_layout :: proc(node: ^Node) {
 }
 
 draw_Tree :: proc(menu:^Menu, node: ^Node){
+
     draw_rect(menu,node);
     for &child in node.children{
         draw_Tree(menu,&child)
@@ -140,24 +141,66 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
 }
 
 draw_rect:: proc (menu:^Menu, node: ^Node){
+    use_solid_shader(menu)
     x0 := node.bounds.x
     y0 := node.bounds.y
 
     x1 := node.bounds.x + node.bounds.width
     y1 := node.bounds.y + node.bounds.height
 
-    verts := [6]Vertex{
-    {{x0, y0, 0}, node.color},
-    {{x0, y1, 0}, node.color},
-    {{x1, y0, 0}, node.color},
+    first := u32(len(menu.window.vertex_renderer.vertices))
 
-    {{x1, y0, 0}, node.color},
-    {{x0, y1, 0}, node.color},
-    {{x1, y1, 0}, node.color},
+    verts := [6]Vertex{
+    {
+        {x0, y0, 0},
+        node.color,
+        {0,0},
+    },
+    {
+        {x0, y1, 0},
+        node.color,
+        {0,0},
+    },
+    {
+        {x1, y0, 0},
+        node.color,
+        {0,0},
+    },
+
+    {
+        {x1, y0, 0},
+        node.color,
+        {0,0},
+    },
+    {
+        {x0, y1, 0},
+         node.color,
+        {0,0},
+    },
+    {
+        {x1, y1, 0},
+         node.color,
+        {0,0},
+    },
     }
 
-    append(&menu.window.vertex_renderer.vertices, ..verts[:])
+    append(
+        &menu.window.vertex_renderer.vertices,
+         ..verts[:]
+        )
+    append(
+        &menu.window.vertex_renderer.commands,
+        Render_Command{
+            kind = .Solid,
+            first_vertex = first,
+            vertex_count = 6,
+        }
+    )
 
 }
 
 
+draw_icon :: proc(menu: ^Menu, node: ^Node){
+    use_icon_shader(menu)
+
+}

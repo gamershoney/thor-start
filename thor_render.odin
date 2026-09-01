@@ -415,9 +415,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         &init_data,
         &menu.window.vertex_renderer.frame_buffer,
     )
-
     
-
     menu.window.ctx.VSSetConstantBuffers(
         menu.window.ctx,
         0,
@@ -425,7 +423,19 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         cast([^]^d3d.IBuffer)&menu.window.vertex_renderer.frame_buffer,   
     )
 
-    
+    sampler_desc := d3d.SAMPLER_DESC{
+        Filter = .MIN_MAG_MIP_LINEAR,
+        AddressU = .CLAMP,
+        AddressV = .CLAMP,
+        AddressW = .CLAMP,
+    }
+
+    menu.window.ctx.PSSetSamplers(
+        menu.window.ctx,
+        0,
+        1,
+        &menu.window.icon_sampler,
+    )
 
     return true
 

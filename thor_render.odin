@@ -467,6 +467,15 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         )
         return false
     }
+
+    menu.window.ctx.OMSetBlendState(
+        menu.window.ctx,
+        menu.window.blend_state,
+        nil,
+        0xffffffff,
+    )
+
+
     return true
 
 

@@ -368,6 +368,20 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         0
     )
 
+    hr = menu.window.device.CreatePixelShader(
+        menu.window.device,
+        raw_data(icon_pixel),
+        len(icon_pixel),
+        nil,
+        &menu.window.icon_pixel_shader,
+    )
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateIconPixelShader failed: 0x%08X", hr)
+        return false
+    }
+
+   
+
     raster_desc := d3d.RASTERIZER_DESC{
     FillMode              = .SOLID,
     CullMode              = .NONE,
@@ -711,3 +725,20 @@ icon_to_texture :: proc "system" (
     return texture_view
 }
 
+use_icon_shader :: proc(menu:^Menu){
+     menu.window.ctx.PSSetShader(
+        menu.window.ctx,
+        menu.window.icon_pixel_shader,
+        nil,
+        0
+    )
+}
+
+use_solid_shader :: proc(menu:^Menu){
+    menu.window.ctx.PSSetShader(
+        menu.window.ctx,
+        menu.window.pixel_shader,
+        nil,
+        0
+    )
+}

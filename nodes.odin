@@ -42,6 +42,7 @@ Size_Value :: struct{
 NodeType :: enum{
     Container = 0,
     List = 1,
+    Icon = 2,
 }
 
 Rect :: struct{

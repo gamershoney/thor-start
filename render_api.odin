@@ -131,8 +131,14 @@ create_layout :: proc(node: ^Node) {
 }
 
 draw_Tree :: proc(menu:^Menu, node: ^Node){
+    switch node.type{
+        case .Container, .List:
+            draw_rect(menu,node)
+        
+        case .Icon:
+            draw_icon(menu,node)
+    }
 
-    draw_rect(menu,node);
     for &child in node.children{
         draw_Tree(menu,&child)
     }
@@ -203,4 +209,61 @@ draw_rect:: proc (menu:^Menu, node: ^Node){
 draw_icon :: proc(menu: ^Menu, node: ^Node){
     use_icon_shader(menu)
 
+    x0 := node.bounds.x
+    y0 := node.bounds.y
+    x1 := x0 + node.bounds.width
+    y1 := y0 + node.bounds.height
+
+    first := u32(len(menu.window.vertex_renderer.vertices))
+
+    white := Color{1, 1, 1, 1}
+
+    verts := [6]Vertex{
+        {
+            position = {x0, y0, 0},
+            color    = white,
+            uv       = {0, 0},
+        },
+        {
+            position = {x0, y1, 0},
+            color    = white,
+            uv       = {0, 1},
+        },
+        {
+            position = {x1, y0, 0},
+            color    = white,
+            uv       = {1, 0},
+        },
+
+        {
+            position = {x1, y0, 0},
+            color    = white,
+            uv       = {1, 0},
+        },
+        {
+            position = {x0, y1, 0},
+            color    = white,
+            uv       = {0, 1},
+        },
+        {
+            position = {x1, y1, 0},
+            color    = white,
+            uv       = {1, 1},
+        },
+    }
+
+    append(
+        &menu.window.vertex_renderer.vertices,
+        ..verts[:],
+    )
+
+    append(
+        &menu.window.vertex_renderer.commands,
+        Render_Command{
+            kind         = .Texture,
+            first_vertex = first,
+            vertex_count = 6,
+            texture      = node.texture,
+        },
+    )
 }

@@ -578,17 +578,45 @@ push_frame :: proc (menu:^Menu){
         &clear_color,
     )
 
-    menu.window.ctx.Draw(
+    for command in menu.window.vertex_renderer.commands{
+        switch command.kind{
+           case.Solid:
+            menu.window.ctx.PSSetShader(
+                menu.window.ctx,
+                menu.window.pixel_shader,
+                nil,
+                0
+            )
+            case.Texture:
+                menu.window.ctx.PSSetShader(
+                    menu.window.ctx,
+                    menu.window.icon_pixel_shader,
+                    nil,
+                    0
+                )
+
+                srv := command.texture
+
+                menu.window.ctx.PSSetShaderResources(
+                    menu.window.ctx,
+                    0,
+                    1,
+                    &srv
+                )
+        }
+        menu.window.ctx.Draw(
         menu.window.ctx,
-        u32(len(menu.window.vertex_renderer.vertices)),
-        0,
+        command.vertex_count,
+        command.first_vertex,
     )
+    }
+    
 
     menu.window.swap_chain.Present(
         menu.window.swap_chain,
         0,
-    {}
-    )
+        {}
+        )
 
 }
 

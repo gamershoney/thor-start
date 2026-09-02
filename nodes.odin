@@ -1,5 +1,6 @@
 package main
 
+import d3d "vendor:directx/d3d11"
 
 Size_Mode:: enum{
     Auto,
@@ -58,6 +59,8 @@ Node :: struct{
     layout: Layout,
     bounds : Rect,
     color  : Color,
+
+    texture : ^d3d.IShaderResourceView
 }
 
 addChild :: proc(parent: ^Node, child: Node){
@@ -80,8 +83,23 @@ new_container :: proc(id:string, static: bool)->Node{
     return cntnr
 }
 
-app_list:: proc(id: string, static: bool)->Node{
-    list : Node = {}
+new_app_list:: proc(id: string, static: bool,menu:^Menu)->Node{
+    list := new_container("app_list",false)
+    list.type = .List
+    list.layout = Layout{
+        width = Size_Value{
+            mode=.Flex,
+            value = 1
+        },
+        height = Size_Value{
+            mode = .Flex,
+            value = 1
+        },
+        direction = .Column,
+        
+    }
+    start_apps := get_start_apps(menu)
+
 
     return list
 }

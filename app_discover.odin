@@ -79,6 +79,7 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
         srv := icon_to_texture(
                 file_info.hIcon,
                 menu)
+        windows.DestroyIcon(file_info.hIcon)
         name := info.name
             entry := App_Entry{
                 name = name,

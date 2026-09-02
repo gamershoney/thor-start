@@ -131,6 +131,9 @@ create_layout :: proc(node: ^Node) {
 }
 
 draw_Tree :: proc(menu:^Menu, node: ^Node){
+    clear(&menu.window.vertex_renderer.vertices)
+    clear(&menu.window.vertex_renderer.commands)
+
     switch node.type{
         case .Container, .List:
             draw_rect(menu,node)

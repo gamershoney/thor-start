@@ -183,42 +183,12 @@ init_tree:: proc(conf:Config)->Node{
 
 test_tree :: proc(menu : ^Menu, tree: ^Node){
     main_node := tree
-    container := new_container(
-        "div1",
-        false
-    )
-    container.color = color_green
-    container.layout = Layout{
-        width = Size_Value{
-            mode = .Percent,
-            value = 50,
-        },
-        height = Size_Value{
-            mode = .Percent,
-            value = 50,
-        }
-    }
-    addChild(main_node,container)
+    
     addChild(
         main_node,
         new_app_list("test-list",
         false,
         menu))
-    container2 := new_container(
-        "div1",
-        false
-    )
-    container2.color = color_red
-    container2.layout = Layout{
-        width = Size_Value{
-            mode = .Percent,
-            value = 50,
-        },
-        height = Size_Value{
-            mode = .Percent,
-            value = 50,
-        }
-    }
-    addChild(main_node,container2)
+
 }
 

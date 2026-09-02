@@ -62,3 +62,57 @@ layout_column_wraps_to_next_line :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.x, f32(25))
     testing.expect_value(t, root.children[2].bounds.y, f32(0))
 }
+
+@(test)
+layout_row_respects_padding :: proc(t: ^testing.T) {
+    root := Node{
+        layout = Layout{
+            direction = .Row,
+            wrap = true,
+            gap = 5,
+            padding = Padding{left = 10, top = 8, right = 10, bottom = 8},
+        },
+        bounds = Rect{x = 4, y = 6, width = 100, height = 100},
+    }
+    defer delete(root.children)
+
+    addChild(&root, make_test_child(35, 20))
+    addChild(&root, make_test_child(35, 20))
+    addChild(&root, make_test_child(35, 20))
+
+    create_layout(&root)
+
+    testing.expect_value(t, root.children[0].bounds.x, f32(14))
+    testing.expect_value(t, root.children[0].bounds.y, f32(14))
+    testing.expect_value(t, root.children[1].bounds.x, f32(54))
+    testing.expect_value(t, root.children[1].bounds.y, f32(14))
+    testing.expect_value(t, root.children[2].bounds.x, f32(14))
+    testing.expect_value(t, root.children[2].bounds.y, f32(39))
+}
+
+@(test)
+layout_column_respects_padding :: proc(t: ^testing.T) {
+    root := Node{
+        layout = Layout{
+            direction = .Column,
+            wrap = true,
+            gap = 5,
+            padding = Padding{left = 10, top = 8, right = 10, bottom = 12},
+        },
+        bounds = Rect{x = 4, y = 6, width = 100, height = 100},
+    }
+    defer delete(root.children)
+
+    addChild(&root, make_test_child(20, 35))
+    addChild(&root, make_test_child(20, 35))
+    addChild(&root, make_test_child(20, 35))
+
+    create_layout(&root)
+
+    testing.expect_value(t, root.children[0].bounds.x, f32(14))
+    testing.expect_value(t, root.children[0].bounds.y, f32(14))
+    testing.expect_value(t, root.children[1].bounds.x, f32(14))
+    testing.expect_value(t, root.children[1].bounds.y, f32(54))
+    testing.expect_value(t, root.children[2].bounds.x, f32(39))
+    testing.expect_value(t, root.children[2].bounds.y, f32(14))
+}

@@ -52,6 +52,7 @@ A container controls how its direct children are placed:
 root.layout.direction = .Row    // or .Column
 root.layout.wrap = true
 root.layout.gap = 8
+root.layout.padding = {left = 12, top = 8, right = 12, bottom = 8}
 ```
 
 Children support `.Pixels`, `.Percent`, `.Flex`, and `.Auto` sizing.

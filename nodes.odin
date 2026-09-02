@@ -30,6 +30,11 @@ Layout :: struct {
     max_height: f32,
 
     gap:     f32,
+    padding: Padding,
+}
+
+Padding :: struct {
+    left, top, right, bottom: f32,
 }
 
 Size_Value :: struct{
@@ -113,7 +118,6 @@ new_app_list :: proc(
 
         app_row.layout = Layout{
             direction = .Row,
-
             width = Size_Value{
                 mode  = .Percent,
                 value = 100,
@@ -134,12 +138,12 @@ new_app_list :: proc(
             layout = Layout{
                 width = Size_Value{
                     mode  = .Pixels,
-                    value = 32,
+                    value = 24,
                 },
 
                 height = Size_Value{
                     mode  = .Pixels,
-                    value = 32,
+                    value = 24,
                 },
             },
         }

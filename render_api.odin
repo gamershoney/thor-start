@@ -11,6 +11,20 @@ Position:: struct{
 create_layout :: proc(node: ^Node) {
     space := node.bounds
 
+    content_x := space.x + node.layout.padding.left
+    content_y := space.y + node.layout.padding.top
+    content_width := space.width -
+        node.layout.padding.left - node.layout.padding.right
+    content_height := space.height -
+        node.layout.padding.top - node.layout.padding.bottom
+
+    if content_width < 0 {
+        content_width = 0
+    }
+    if content_height < 0 {
+        content_height = 0
+    }
+
     fixed_width: f32
     fixed_height: f32
     total_flex_width: f32
@@ -21,7 +35,7 @@ create_layout :: proc(node: ^Node) {
         case .Pixels:
             fixed_width += child.layout.width.value
         case .Percent:
-            fixed_width += space.width * child.layout.width.value / 100.0
+            fixed_width += content_width * child.layout.width.value / 100.0
         case .Flex:
             total_flex_width += child.layout.width.value
         case .Auto:
@@ -32,7 +46,7 @@ create_layout :: proc(node: ^Node) {
         case .Pixels:
             fixed_height += child.layout.height.value
         case .Percent:
-            fixed_height += space.height * child.layout.height.value / 100.0
+            fixed_height += content_height * child.layout.height.value / 100.0
         case .Flex:
             total_flex_height += child.layout.height.value
         case .Auto:
@@ -51,8 +65,8 @@ create_layout :: proc(node: ^Node) {
         }
     }
 
-    remaining_width := space.width - fixed_width - gap_width
-    remaining_height := space.height - fixed_height - gap_height
+    remaining_width := content_width - fixed_width - gap_width
+    remaining_height := content_height - fixed_height - gap_height
     if remaining_width < 0 {
         remaining_width = 0
     }
@@ -66,7 +80,7 @@ create_layout :: proc(node: ^Node) {
         case .Pixels:
             child.bounds.width = child.layout.width.value
         case .Percent:
-            child.bounds.width = space.width * child.layout.width.value / 100.0
+            child.bounds.width = content_width * child.layout.width.value / 100.0
         case .Flex:
             if total_flex_width > 0 {
                 child.bounds.width =
@@ -78,7 +92,7 @@ create_layout :: proc(node: ^Node) {
         case .Pixels:
             child.bounds.height = child.layout.height.value
         case .Percent:
-            child.bounds.height = space.height * child.layout.height.value / 100.0
+            child.bounds.height = content_height * child.layout.height.value / 100.0
         case .Flex:
             if total_flex_height > 0 {
                 child.bounds.height =
@@ -87,16 +101,16 @@ create_layout :: proc(node: ^Node) {
         }
     }
 
-    cursor_x := space.x
-    cursor_y := space.y
+    cursor_x := content_x
+    cursor_y := content_y
     line_extent: f32
 
     for &child in node.children {
         if node.layout.direction == .Row {
             if node.layout.wrap &&
-               cursor_x > space.x &&
-               cursor_x + child.bounds.width > space.x + space.width {
-                cursor_x = space.x
+               cursor_x > content_x &&
+               cursor_x + child.bounds.width > content_x + content_width {
+                cursor_x = content_x
                 cursor_y += line_extent + node.layout.gap
                 line_extent = 0
             }
@@ -109,9 +123,9 @@ create_layout :: proc(node: ^Node) {
             }
         } else {
             if node.layout.wrap &&
-               cursor_y > space.y &&
-               cursor_y + child.bounds.height > space.y + space.height {
-                cursor_y = space.y
+               cursor_y > content_y &&
+               cursor_y + child.bounds.height > content_y + content_height {
+                cursor_y = content_y
                 cursor_x += line_extent + node.layout.gap
                 line_extent = 0
             }
@@ -131,8 +145,7 @@ create_layout :: proc(node: ^Node) {
 }
 
 draw_Tree :: proc(menu:^Menu, node: ^Node){
-    clear(&menu.window.vertex_renderer.vertices)
-    clear(&menu.window.vertex_renderer.commands)
+
 
     switch node.type{
         case .Container, .List:

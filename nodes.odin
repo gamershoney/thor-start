@@ -79,27 +79,74 @@ new_container :: proc(id:string, static: bool)->Node{
         type = .Container,
         static = static,
     }
-
+    
     return cntnr
 }
 
-new_app_list:: proc(id: string, static: bool,menu:^Menu)->Node{
-    list := new_container("app_list",false)
+new_app_list :: proc(
+    id: string,
+    static: bool,
+    menu: ^Menu,
+) -> Node {
+
+    list := new_container(id, static)
+
     list.type = .List
+
     list.layout = Layout{
         width = Size_Value{
-            mode=.Flex,
-            value = 1
+            mode  = .Flex,
+            value = 1,
         },
         height = Size_Value{
-            mode = .Flex,
-            value = 1
+            mode  = .Flex,
+            value = 1,
         },
         direction = .Column,
-        
     }
+
     start_apps := get_start_apps(menu)
 
+    for app in start_apps {
+        // The entire application row
+        app_row := new_container(app.name, false)
+
+        app_row.layout = Layout{
+            direction = .Row,
+
+            width = Size_Value{
+                mode  = .Percent,
+                value = 100,
+            },
+
+            height = Size_Value{
+                mode  = .Pixels,
+                value = 48,
+            },
+        }
+
+        // The actual icon
+        icon := Node{
+            id      = app.name,
+            type    = .Icon,
+            texture = app.icon,
+
+            layout = Layout{
+                width = Size_Value{
+                    mode  = .Pixels,
+                    value = 32,
+                },
+
+                height = Size_Value{
+                    mode  = .Pixels,
+                    value = 32,
+                },
+            },
+        }
+
+        addChild(&app_row, icon)
+        addChild(&list, app_row)
+    }
 
     return list
 }
@@ -152,7 +199,11 @@ test_tree :: proc(menu : ^Menu, tree: ^Node){
         }
     }
     addChild(main_node,container)
-
+    addChild(
+        main_node,
+        new_app_list("test-list",
+        false,
+        menu))
     container2 := new_container(
         "div1",
         false

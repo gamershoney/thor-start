@@ -147,7 +147,6 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
 }
 
 draw_rect:: proc (menu:^Menu, node: ^Node){
-    use_solid_shader(menu)
     x0 := node.bounds.x
     y0 := node.bounds.y
 
@@ -207,7 +206,6 @@ draw_rect:: proc (menu:^Menu, node: ^Node){
 
 
 draw_icon :: proc(menu: ^Menu, node: ^Node){
-    use_icon_shader(menu)
 
     x0 := node.bounds.x
     y0 := node.bounds.y

@@ -14,12 +14,23 @@ Layout_Direction :: enum {
     Column,
 }
 
+Border_Measurements :: [4]f32
+
+Border :: struct {
+    color : Color,
+    Border : Border_Measurements,
+    Thickness : f32,
+}
+
 Layout :: struct {
     width:  Size_Value,
     height: Size_Value,
 
     direction: Layout_Direction,
     wrap: bool,
+
+    has_border : bool,
+    border: Border,
 
     flex_grow:   f32,
     flex_shrink: f32,
@@ -29,6 +40,7 @@ Layout :: struct {
     max_width:  f32,
     max_height: f32,
 
+    
     gap:     f32,
     padding: Padding,
 }
@@ -125,7 +137,7 @@ new_app_list :: proc(
 
             height = Size_Value{
                 mode  = .Pixels,
-                value = 48,
+                value = 72,
             },
         }
 
@@ -138,12 +150,12 @@ new_app_list :: proc(
             layout = Layout{
                 width = Size_Value{
                     mode  = .Pixels,
-                    value = 24,
+                    value = 64,
                 },
 
                 height = Size_Value{
                     mode  = .Pixels,
-                    value = 24,
+                    value = 64,
                 },
             },
         }
@@ -153,6 +165,11 @@ new_app_list :: proc(
     }
 
     return list
+}
+
+add_border :: proc(node:^Node, border: Border){
+    node.layout.has_border = true
+    node.layout.border = border
 }
 
 init_tree:: proc(conf:Config)->Node{

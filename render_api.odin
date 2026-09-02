@@ -155,11 +155,18 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
             draw_icon(menu,node)
     }
 
+    if node.layout.has_border {
+        draw_border(menu,node)
+    }
     for &child in node.children{
         draw_Tree(menu,&child)
     }
 
 
+}
+
+draw_border :: proc (menu:^Menu,node: ^Node){
+    
 }
 
 draw_rect:: proc (menu:^Menu, node: ^Node){

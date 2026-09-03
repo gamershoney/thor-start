@@ -778,7 +778,33 @@ icon_to_texture :: proc "system" (
 }
 
 init_font :: proc(menu:^Menu){
+    fontstash.Init(
+        &menu.window.font_renderer.ctx,
+        512,
+        512,
+        .TOPLEFT
+    )
 
+    dep_mono := fontstash.AddFont(
+            &menu.window.font_renderer.ctx,
+            "Departure Mono",
+            "./fonts/DepartureMono-Regular.otf"
+    )
+
+    fontstash.SetFont(
+        &menu.window.font_renderer.ctx,
+        dep_mono,
+    )
+
+    fontstash.SetSize(
+        &menu.window.font_renderer.ctx,
+        16
+    )
+
+    fontstash.SetColor(
+        &menu.window.font_renderer.ctx,
+        font_white
+    )
 }
 
 use_icon_shader :: proc(menu:^Menu){

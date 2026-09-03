@@ -14,12 +14,13 @@ Layout_Direction :: enum {
     Column,
 }
 
-Border_Measurements :: [4]f32
+Border_Measurements :: struct {
+    top, bottom, left, right: f32,
+}
 
 Border :: struct {
-    color : Color,
-    Border : Border_Measurements,
-    Thickness : f32,
+    color: Color,
+    sides: Border_Measurements,
 }
 
 Layout :: struct {
@@ -89,6 +90,7 @@ Color :: [4]f32
 color_red : Color : {1,0,0,1}
 color_blue : Color : {0,0,1,1}
 color_green : Color : {0,1,0,1}
+color_white : Color : {1,1,1,1}
 
 new_container :: proc(id:string, static: bool)->Node{
     cntnr : Node = Node{
@@ -121,6 +123,14 @@ new_app_list :: proc(
         },
         direction = .Column,
     }
+
+    add_border(
+        &list,
+        Border{
+            color = color_white,
+            sides = {right = 2},
+        }
+    )
 
     start_apps := get_start_apps(menu)
 

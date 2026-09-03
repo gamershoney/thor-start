@@ -116,3 +116,61 @@ layout_column_respects_padding :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.x, f32(39))
     testing.expect_value(t, root.children[2].bounds.y, f32(14))
 }
+
+@(test)
+layout_respects_individual_border_sides :: proc(t: ^testing.T) {
+    root := Node{
+        layout = Layout{
+            direction = .Row,
+            has_border = true,
+            border = Border{
+                color = color_red,
+                sides = {top = 2, bottom = 4, left = 6, right = 8},
+            },
+            padding = Padding{left = 10, top = 20, right = 30, bottom = 40},
+        },
+        bounds = Rect{x = 5, y = 7, width = 200, height = 150},
+    }
+    defer delete(root.children)
+
+    child := Node{
+        layout = Layout{
+            width = Size_Value{mode = .Percent, value = 100},
+            height = Size_Value{mode = .Percent, value = 100},
+        },
+    }
+    addChild(&root, child)
+
+    create_layout(&root)
+
+    testing.expect_value(t, root.children[0].bounds.x, f32(21))
+    testing.expect_value(t, root.children[0].bounds.y, f32(29))
+    testing.expect_value(t, root.children[0].bounds.width, f32(146))
+    testing.expect_value(t, root.children[0].bounds.height, f32(84))
+}
+
+@(test)
+border_renders_only_enabled_sides :: proc(t: ^testing.T) {
+    menu := Menu{}
+    defer delete(menu.window.vertex_renderer.vertices)
+    defer delete(menu.window.vertex_renderer.commands)
+
+    node := Node{
+        bounds = Rect{x = 10, y = 20, width = 100, height = 50},
+        layout = Layout{
+            border = Border{
+                color = color_red,
+                sides = {top = 2, right = 3},
+            },
+        },
+    }
+
+    draw_border(&menu, &node)
+
+    testing.expect_value(t, len(menu.window.vertex_renderer.commands), 2)
+    testing.expect_value(t, len(menu.window.vertex_renderer.vertices), 12)
+    testing.expect_value(t, menu.window.vertex_renderer.vertices[0].position[0], f32(107))
+    testing.expect_value(t, menu.window.vertex_renderer.vertices[0].position[1], f32(22))
+    testing.expect_value(t, menu.window.vertex_renderer.vertices[6].position[0], f32(10))
+    testing.expect_value(t, menu.window.vertex_renderer.vertices[6].position[1], f32(20))
+}

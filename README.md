@@ -53,6 +53,10 @@ root.layout.direction = .Row    // or .Column
 root.layout.wrap = true
 root.layout.gap = 8
 root.layout.padding = {left = 12, top = 8, right = 12, bottom = 8}
+add_border(&root, Border{
+    color = color_red,
+    sides = {top = 1, bottom = 2, left = 0, right = 4},
+})
 ```
 
 Children support `.Pixels`, `.Percent`, `.Flex`, and `.Auto` sizing.

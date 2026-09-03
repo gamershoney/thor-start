@@ -125,6 +125,7 @@ window_init :: proc "stdcall" ()->Menu{
     wc.lpfnWndProc = wproc
     wc.hInstance = cast(windows.HINSTANCE)hinstance
     wc.lpszClassName = classname
+    wc.hCursor = windows.LoadCursorA(nil, windows.IDC_ARROW)
     windows.RegisterClassW(&wc)
 
     hwnd := windows.CreateWindowExW(

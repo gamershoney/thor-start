@@ -11,11 +11,23 @@ Position:: struct{
 create_layout :: proc(node: ^Node) {
     space := node.bounds
 
-    content_x := space.x + node.layout.padding.left
-    content_y := space.y + node.layout.padding.top
+    border := Border_Measurements{}
+    if node.layout.has_border {
+        border = node.layout.border.sides
+
+        if border.top < 0 do border.top = 0
+        if border.bottom < 0 do border.bottom = 0
+        if border.left < 0 do border.left = 0
+        if border.right < 0 do border.right = 0
+    }
+
+    content_x := space.x + border.left + node.layout.padding.left
+    content_y := space.y + border.top + node.layout.padding.top
     content_width := space.width -
+        border.left - border.right -
         node.layout.padding.left - node.layout.padding.right
     content_height := space.height -
+        border.top - border.bottom -
         node.layout.padding.top - node.layout.padding.bottom
 
     if content_width < 0 {
@@ -166,8 +178,135 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
 }
 
 draw_border :: proc (menu:^Menu,node: ^Node){
-    
+    x0 := node.bounds.x
+    y0 := node.bounds.y
+
+    x1 := node.bounds.x + node.bounds.width
+    y1 := node.bounds.y + node.bounds.height
+
+    sides := node.layout.border.sides
+    color := node.layout.border.color
+
+    // left
+    if sides.left > 0 {
+        draw_border_line(
+            Rect{
+                x      = x0,
+                y      = y0 + sides.top,
+                width  = sides.left,
+                height = node.bounds.height - sides.top - sides.bottom,
+            },
+            color,
+            menu,
+        )
+    }
+
+    // right
+    if sides.right > 0 {
+        draw_border_line(
+            Rect{
+                x      = x1 - sides.right,
+                y      = y0 + sides.top,
+                width  = sides.right,
+                height = node.bounds.height - sides.top - sides.bottom,
+            },
+            color,
+            menu,
+        )
+    }
+
+    // top
+    if sides.top > 0 {
+        draw_border_line(
+            Rect{
+                x      = x0,
+                y      = y0,
+                width  = node.bounds.width,
+                height = sides.top,
+            },
+            color,
+            menu,
+        )
+    }
+
+    // bottom
+    if sides.bottom > 0 {
+        draw_border_line(
+            Rect{
+                x      = x0,
+                y      = y1 - sides.bottom,
+                width  = node.bounds.width,
+                height = sides.bottom,
+            },
+            color,
+            menu,
+        )
+    }
 }
+
+
+draw_border_line :: proc(rect:Rect, color:Color,menu:^Menu){
+    if rect.width <= 0 || rect.height <= 0 {
+        return
+    }
+
+    x0 := rect.x
+    y0 := rect.y
+    x1 := rect.x + rect.width
+    y1 := rect.y + rect.height
+
+    first := u32(len(menu.window.vertex_renderer.vertices))
+
+
+    verts := [6]Vertex{
+    {
+        {x0, y0, 0},
+        color,
+        {0,0},
+    },
+    {
+        {x0, y1, 0},
+        color,
+        {0,0},
+    },
+    {
+        {x1, y0, 0},
+        color,
+        {0,0},
+    },
+
+    {
+        {x1, y0, 0},
+        color,
+        {0,0},
+    },
+    {
+        {x0, y1, 0},
+        color,
+        {0,0},
+    },
+    {
+        {x1, y1, 0},
+        color,
+        {0,0},
+    },
+    }
+
+    append(
+        &menu.window.vertex_renderer.vertices,
+         ..verts[:]
+        )
+    append(
+        &menu.window.vertex_renderer.commands,
+        Render_Command{
+            kind = .Solid,
+            first_vertex = first,
+            vertex_count = 6,
+        }
+    )
+
+}
+
 
 draw_rect:: proc (menu:^Menu, node: ^Node){
     x0 := node.bounds.x

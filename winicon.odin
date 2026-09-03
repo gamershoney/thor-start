@@ -2,6 +2,7 @@ package main
 
 
 import "core:fmt"
+import "core:mem"
 import "base:runtime"
 import windows "core:sys/windows"
 import "core:image"
@@ -60,6 +61,8 @@ ULW_ALPHA    :: windows.DWORD(0x00000002)
 ULW_OPAQUE   :: windows.DWORD(0x00000004)
 
 automation: ^IUIAutomation = nil
+start_button: ^IUIAutomationElement = nil
+thor_icon_rect: windows.RECT
 uiAutoErr :: distinct string
 
 
@@ -335,16 +338,14 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
         return err,rect
     }
 
-    startbtn : ^IUIAutomationElement = nil
-
     hr = taskelement.lpvtbl.FindFirst(
         taskelement,
         .TreeScope_Subtree,
         condition,
-        &startbtn
+        &start_button
     )
 
-    if startbtn == nil {
+    if start_button == nil {
     err = "FindFirst succeeded, but StartButton was not found"
     return err,rect
     }
@@ -357,8 +358,8 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
             return err,rect
     }	
 
-    hr = startbtn.lpvtbl.get_CurrentBoundingRectangle(
-        startbtn,
+    hr = start_button.lpvtbl.get_CurrentBoundingRectangle(
+        start_button,
         &rect
     )
 
@@ -380,19 +381,56 @@ overlay :: proc "system" (
     lparam: windows.LPARAM
 )-> windows.LRESULT{
 
+	context = runtime.default_context()
+
 	switch umsg {
 	case windows.WM_TIMER:
-		windows.SetWindowPos(
-			hwnd,
-			windows.HWND_TOPMOST,
-			0,0,0,0,
-			windows.SWP_NOMOVE |
-			windows.SWP_NOSIZE |
-			windows.SWP_NOACTIVATE |
-			windows.SWP_SHOWWINDOW
-		)
+		if start_button != nil {
+			current_rect: windows.RECT
+			hr := start_button.lpvtbl.get_CurrentBoundingRectangle(
+				start_button,
+				&current_rect,
+			)
+
+			if windows.SUCCEEDED(hr) {
+				old_width := thor_icon_rect.right - thor_icon_rect.left
+				old_height := thor_icon_rect.bottom - thor_icon_rect.top
+				new_width := current_rect.right - current_rect.left
+				new_height := current_rect.bottom - current_rect.top
+				size_changed := old_width != new_width || old_height != new_height
+				position_changed :=
+					thor_icon_rect.left != current_rect.left ||
+					thor_icon_rect.top != current_rect.top
+
+				if size_changed {
+					update_thor_icon(hwnd, current_rect)
+				} else if position_changed {
+					windows.SetWindowPos(
+						hwnd,
+						windows.HWND_TOPMOST,
+						current_rect.left,
+						current_rect.top,
+						0,
+						0,
+						windows.SWP_NOSIZE |
+						windows.SWP_NOACTIVATE |
+						windows.SWP_SHOWWINDOW,
+					)
+					thor_icon_rect = current_rect
+				} else {
+					windows.SetWindowPos(
+						hwnd,
+						windows.HWND_TOPMOST,
+						0, 0, 0, 0,
+						windows.SWP_NOMOVE |
+						windows.SWP_NOSIZE |
+						windows.SWP_NOACTIVATE |
+						windows.SWP_SHOWWINDOW,
+					)
+				}
+			}
+		}
     }
-	context = runtime.default_context()
 	fmt.println(umsg)
 
     return windows.DefWindowProcW(
@@ -401,6 +439,161 @@ overlay :: proc "system" (
         wparam,
         lparam
     )
+}
+
+
+update_thor_icon :: proc "system" (
+	hwnd: windows.HWND,
+	rect: windows.RECT,
+) -> bool {
+	context = runtime.default_context()
+
+	target_width := int(rect.right - rect.left)
+	target_height := int(rect.bottom - rect.top)
+	if hwnd == nil || target_width <= 0 || target_height <= 0 {
+		return false
+	}
+
+	options := image.Options{
+		.alpha_add_if_missing,
+		.alpha_premultiply,
+	}
+	img, err := image.load_from_file(
+		"./icon.png",
+		options,
+		context.allocator,
+	)
+	if err != nil {
+		fmt.println("Odin image load failed:", err)
+		return false
+	}
+	defer png.destroy(img)
+
+	if img.width <= 0 || img.height <= 0 || img.channels != 4 {
+		fmt.println("Thor icon must decode as a non-empty RGBA image")
+		return false
+	}
+
+	screen_dc := windows.GetDC(nil)
+	if screen_dc == nil {
+		fmt.printfln("GetDC failed: %d", windows.GetLastError())
+		return false
+	}
+	defer windows.ReleaseDC(nil, screen_dc)
+
+	memory_dc := windows.CreateCompatibleDC(screen_dc)
+	if memory_dc == nil {
+		fmt.printfln(
+			"CreateCompatibleDC failed: %d",
+			windows.GetLastError(),
+		)
+		return false
+	}
+	defer windows.DeleteDC(memory_dc)
+
+	// A negative height produces a top-down DIB, matching the decoded image.
+	bmi := windows.BITMAPINFO{
+		bmiHeader = {
+			biSize = size_of(windows.BITMAPINFOHEADER),
+			biWidth = i32(target_width),
+			biHeight = -i32(target_height),
+			biPlanes = 1,
+			biBitCount = 32,
+			biCompression = windows.BI_RGB,
+		},
+	}
+
+	pixels_raw: rawptr
+	bitmap := windows.CreateDIBSection(
+		screen_dc,
+		&bmi,
+		windows.DIB_RGB_COLORS,
+		&pixels_raw,
+		nil,
+		0,
+	)
+	if bitmap == nil || pixels_raw == nil {
+		fmt.printfln(
+			"CreateDIBSection failed: %d",
+			windows.GetLastError(),
+		)
+		return false
+	}
+	defer windows.DeleteObject(cast(windows.HGDIOBJ)bitmap)
+
+	old_bitmap := windows.SelectObject(
+		memory_dc,
+		cast(windows.HGDIOBJ)bitmap,
+	)
+	if old_bitmap == nil {
+		fmt.printfln("SelectObject failed: %d", windows.GetLastError())
+		return false
+	}
+	defer windows.SelectObject(memory_dc, old_bitmap)
+
+	// Fit the image inside the live Start-button rectangle without stretching
+	// it when the taskbar changes size or orientation.
+	dst := cast([^]u8)pixels_raw
+	mem.zero_slice(dst[:target_width * target_height * 4])
+
+	scale_x := f32(target_width) / f32(img.width)
+	scale_y := f32(target_height) / f32(img.height)
+	scale := min(scale_x, scale_y)
+	draw_width := max(1, int(f32(img.width) * scale + 0.5))
+	draw_height := max(1, int(f32(img.height) * scale + 0.5))
+	offset_x := (target_width - draw_width) / 2
+	offset_y := (target_height - draw_height) / 2
+
+	for y in 0..<draw_height {
+		source_y := min(y * img.height / draw_height, img.height - 1)
+		for x in 0..<draw_width {
+			source_x := min(x * img.width / draw_width, img.width - 1)
+			source_offset := (source_y * img.width + source_x) * 4
+			dest_x := offset_x + x
+			dest_y := offset_y + y
+			dest_offset := (dest_y * target_width + dest_x) * 4
+
+			// Decoded pixels are RGBA; a 32-bit Windows DIB is BGRA.
+			dst[dest_offset + 0] = img.pixels.buf[source_offset + 2]
+			dst[dest_offset + 1] = img.pixels.buf[source_offset + 1]
+			dst[dest_offset + 2] = img.pixels.buf[source_offset + 0]
+			dst[dest_offset + 3] = img.pixels.buf[source_offset + 3]
+		}
+	}
+
+	dst_point := windows.POINT{x = rect.left, y = rect.top}
+	src_point := windows.POINT{x = 0, y = 0}
+	size := windows.SIZE{
+		cx = i32(target_width),
+		cy = i32(target_height),
+	}
+	blend := windows.BLENDFUNCTION{
+		BlendOp = windows.AC_SRC_OVER,
+		BlendFlags = 0,
+		SourceConstantAlpha = 255,
+		AlphaFormat = windows.AC_SRC_ALPHA,
+	}
+
+	if !UpdateLayeredWindow(
+		hwnd,
+		screen_dc,
+		&dst_point,
+		&size,
+		memory_dc,
+		&src_point,
+		0,
+		&blend,
+		ULW_ALPHA,
+	) {
+		fmt.printfln(
+			"UpdateLayeredWindow failed: %d",
+			windows.GetLastError(),
+		)
+		return false
+	}
+
+	thor_icon_rect = rect
+	return true
 }
 
 
@@ -458,128 +651,10 @@ fmt.printfln(
     )
     return
 	}
-
-    screen_dc := windows.GetDC(nil)
-    defer windows.ReleaseDC(nil,screen_dc)
-
-    memory_dc := windows.CreateCompatibleDC(screen_dc)
-    defer windows.DeleteDC(memory_dc)
-
-	options := image.Options{
-    .alpha_add_if_missing,
-    .alpha_premultiply,
-	}
-
-	img, err := image.load_from_file(
-		"./icon.png",
-		options,
-		context.allocator,
-	)
-	if err != nil {
-		fmt.println("Odin image load failed:", err)
+	if !update_thor_icon(icon, rect) {
+		windows.DestroyWindow(icon)
 		return
 	}
-
-	defer png.destroy(img)
-
-fmt.println(
-    "width:", img.width,
-    "height:", img.height,
-    "channels:", img.channels,
-    "depth:", img.depth,
-)
-
-	bmi : windows.BITMAPINFO = {
-		bmiHeader = {
-			biSize = size_of(windows.BITMAPINFOHEADER),
-			biWidth = width,
-			biHeight = height,
-			biPlanes = 1,
-			biBitCount = 32,
-			biCompression = windows.BI_RGB
-		}
-	}
-
-	ptr : rawptr = nil
-	bitmap := windows.CreateDIBSection(
-		screen_dc,
-		&bmi,
-		windows.DIB_RGB_COLORS,
-		&ptr,
-		nil,
-		0
-	)
-
-	dst := cast([^]u8)ptr
-	
-	pixel_count := img.width * img.height
-
-	for i in 0..<pixel_count {
-		offset := i*4
-		dst[offset + 0] = img.pixels.buf[offset + 2]
-		dst[offset + 1] = img.pixels.buf[offset + 1]
-		dst[offset + 2] = img.pixels.buf[offset + 0]
-		dst[offset + 3] = img.pixels.buf[offset + 3]
-
-	} 
-
-	if bitmap == nil {
-		errcode := windows.GetLastError()
-		fmt.printfln(
-			"LoadImageW failed: %d (%#x)\n",
-			cast(u32)errcode,
-			cast(u32)errcode,
-		)
-		return
-	}
-
-    defer windows.DeleteObject(cast(windows.HGDIOBJ)bitmap)
-
-    old_bitmap := windows.SelectObject(
-        memory_dc,
-        cast(windows.HGDIOBJ)bitmap,
-    )
-
-    defer windows.SelectObject(memory_dc, old_bitmap)
-
-    dst_point := windows.POINT {
-        x = rect.left,
-        y = rect.top,
-    }
-
-    src_point := windows.POINT {
-        x = 0,
-        y = 0,
-    }
-
-    size := windows.SIZE {
-        cx = width,
-        cy = height,
-    }
-	
-    blend := windows.BLENDFUNCTION{
-        BlendOp             = windows.AC_SRC_OVER,
-        BlendFlags          = 0,
-        SourceConstantAlpha = 255,
-        AlphaFormat         = windows.AC_SRC_ALPHA,
-    }
-
-    ok := UpdateLayeredWindow(
-        icon,
-        screen_dc,
-        &dst_point,
-        &size,
-        memory_dc,
-        &src_point,
-        0,
-        &blend,
-        ULW_ALPHA
-    )
-
-    if !ok{
-        fmt.printfln("UpdateLayeredWindow failed: %d",
-        windows.GetLastError())
-    }
     windows.ShowWindow(
     icon,
     windows.SW_SHOWNOACTIVATE,

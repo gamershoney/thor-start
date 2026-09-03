@@ -7,7 +7,7 @@ import "core:mem"
 import "base:runtime"
 import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
-
+import fontstash "vendor:fontstash"
 
 Config:: struct{
     width: f32,
@@ -29,6 +29,14 @@ Render_Command :: struct {
     first_vertex: u32,
     vertex_count: u32,
     texture:      ^d3d.IShaderResourceView,
+}
+
+Font_Renderer :: struct { 
+    ctx : fontstash.FontContext,
+    font_id: int,
+
+    texture : ^d3d.ITexture2D,
+    srv : ^d3d.IShaderResourceView,
 }
 
 Window::struct{
@@ -53,6 +61,8 @@ Window::struct{
     icon_sampler : ^d3d.ISamplerState,
     frame_data : Frame_Data,
     blend_state : ^d3d.IBlendState,
+    font_renderer : Font_Renderer,
+    text_pixel_shader : ^d3d.IPixelShader,
 }
 
 Menu:: struct{
@@ -765,6 +775,10 @@ icon_to_texture :: proc "system" (
 
     
     return texture_view
+}
+
+init_font :: proc(menu:^Menu){
+
 }
 
 use_icon_shader :: proc(menu:^Menu){

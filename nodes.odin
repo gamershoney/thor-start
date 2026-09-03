@@ -9,6 +9,9 @@ Size_Mode:: enum{
     Flex,
 }
 
+Color :: [4]f32
+
+
 Layout_Direction :: enum {
     Row,
     Column,
@@ -21,6 +24,18 @@ Border_Measurements :: struct {
 Border :: struct {
     color: Color,
     sides: Border_Measurements,
+}
+
+Text_Alignment :: enum{
+    left,
+    right,
+    center,
+}
+
+Text_Style :: struct{
+    alignment : Text_Alignment,
+    color : Color,
+    font_size : f32,
 }
 
 Layout :: struct {
@@ -62,6 +77,7 @@ NodeType :: enum{
     Container = 0,
     List = 1,
     Icon = 2,
+    Text = 3,
 }
 
 Rect :: struct{
@@ -78,6 +94,7 @@ Node :: struct{
     bounds : Rect,
     color  : Color,
 
+    text : string,
     texture : ^d3d.IShaderResourceView
 }
 
@@ -85,12 +102,6 @@ addChild :: proc(parent: ^Node, child: Node){
     append(&parent.children, child)
 }
 
-Color :: [4]f32
-
-color_red : Color : {1,0,0,1}
-color_blue : Color : {0,0,1,1}
-color_green : Color : {0,1,0,1}
-color_white : Color : {1,1,1,1}
 
 new_container :: proc(id:string, static: bool)->Node{
     cntnr : Node = Node{
@@ -102,6 +113,8 @@ new_container :: proc(id:string, static: bool)->Node{
     return cntnr
 }
 
+
+new_text :: proc(id: string, static: bool, text:string, )
 new_app_list :: proc(
     id: string,
     static: bool,
@@ -150,6 +163,8 @@ new_app_list :: proc(
                 value = 72,
             },
         }
+
+        app_row.text = app.name
 
         // The actual icon
         icon := Node{

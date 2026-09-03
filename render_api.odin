@@ -1,6 +1,8 @@
 package main
 
 import d3d "vendor:directx/d3d11"
+import fontstash "vendor:fontstash"
+
 Position:: struct{
     position : [3]f32,
     width: f32,
@@ -174,6 +176,51 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
         draw_Tree(menu,&child)
     }
 
+
+}
+
+draw_text :: proc(menu:^Menu, node: ^Node){
+   iter := fontstash.TextIterInit(
+    &menu.window.font_renderer.ctx,
+    node.bounds.x,
+    node.bounds.y,
+    node.text,
+   )
+
+    quad : ^fontstash.Quad
+    first := u32(len(menu.window.vertex_renderer.vertices))
+
+   for fontstash.TextIterNext(
+    &menu.window.font_renderer.ctx,
+    &iter,
+    quad
+   ){
+        verts := [6]Vertex{
+            {{quad.x0, quad.y0, 0}, node.color, {quad.s0, quad.t0}},
+            {{quad.x0, quad.y1, 0}, node.color, {quad.s0, quad.t1}},
+            {{quad.x1, quad.y0, 0}, node.color, {quad.s1, quad.t0}},
+
+            {{quad.x1, quad.y0, 0}, node.color, {quad.s1, quad.t0}},
+            {{quad.x0, quad.y1, 0}, node.color, {quad.s0, quad.t1}},
+            {{quad.x1, quad.y1, 0}, node.color, {quad.s1, quad.t1}},
+        }
+
+        append(&menu.window.vertex_renderer.vertices,
+        ..verts[:])
+
+   }
+
+   vertex_count := u32(len(menu.window.vertex_renderer.vertices)) - first
+
+   append(
+    &menu.window.vertex_renderer.commands,
+    Render_Command{
+        kind = .Text,
+        first_vertex = first,
+        vertex_count = vertex_count,
+        texture = menu.window.font_renderer.srv,
+    }
+   )
 
 }
 

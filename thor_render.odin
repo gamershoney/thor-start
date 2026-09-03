@@ -22,6 +22,7 @@ Frame_Data :: struct {
 Render_Kind :: enum {
     Solid,
     Texture,
+    Text
 }
 
 Render_Command :: struct {
@@ -804,6 +805,36 @@ init_font :: proc(menu:^Menu){
     fontstash.SetColor(
         &menu.window.font_renderer.ctx,
         font_white
+    )
+
+    texture_desc := d3d.TEXTURE2D_DESC{
+        Width = 512,
+        Height = 512,
+        MipLevels = 1,
+        ArraySize = 1,
+        Format = .R8_UNORM,
+        SampleDesc = {
+            Count = 1,
+        },
+        Usage = .DEFAULT,
+        BindFlags = {.SHADER_RESOURCE},
+
+    }
+
+    texture : d3d.ITexture2D
+
+    menu.window.device.CreateTexture2D(
+        menu.window.device,
+        &texture_desc,
+        nil,
+        &menu.window.font_renderer.texture,
+    )
+
+    menu.window.device.CreateShaderResourceView(
+        menu.window.device,
+        cast(^d3d.IResource)menu.window.font_renderer.texture,
+        nil,
+        &menu.window.font_renderer.srv
     )
 }
 

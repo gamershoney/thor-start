@@ -5,8 +5,24 @@ import "core:fmt"
 import windows "core:sys/windows"
 import "core:time"
 
+App_State :: struct{
+    menu : Menu,
+    root : Node,
+    dirty : bool,
+}
+
+Event_Listeners : [dynamic]Action_CallBack
+
+
+
+global_state : ^App_State
+
 // Wakes the entire application up and politely asks Windows not to ruin the vibe.
 main :: proc() {
+
+    state := App_State{}
+
+    global_state = &state
 
     err,rect := initUIAuto()
     if err != ""{
@@ -15,25 +31,34 @@ main :: proc() {
     }
 	drawThorIcon(rect)
     defer windows.CoUninitialize()
-    menu := window_init()
-    ok := init_buffer(&menu)
+    global_state.menu = window_init()
+    ok := init_buffer(&global_state.menu)
     if !ok{
         fmt.println("error on init buffer")
         return
     }
-    ok = init_set_layout_and_buffer(&menu)
+    ok = init_set_layout_and_buffer(&global_state.menu)
     if !ok{
         fmt.println("error on set layout and buffer")
         return
     }
-    main := init_tree(menu.config)
-    init_font(&menu)
-    test_tree(&menu, &main)
+    main := init_tree(global_state.menu.config)
+    init_font(&global_state.menu)
+    test_tree(&global_state.menu, &main)
     create_layout(&main)
-    draw_Tree(&menu, &main)
-    build_frame(&menu)
-    push_frame(&menu)
-    err2 := bindWinKey()
+    draw_Tree(&global_state.menu, &main)
+    build_frame(&global_state.menu)
+    push_frame(&global_state.menu)
+
+    winkeyHook, err2 := bindWinKey()
+    defer windows.UnhookWindowsHookEx(winkeyHook)
+
+    msg: windows.MSG
+	for windows.GetMessageW(&msg, nil, 0, 0) > 0 {
+
+		windows.TranslateMessage(&msg)
+		windows.DispatchMessageW(&msg)
+	}
     fmt.println(err2)
 
 }

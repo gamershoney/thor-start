@@ -79,6 +79,9 @@ Menu:: struct{
 }
 
 
+handle_mouse_calls :: proc(x:int, y:int, event: Input_Event){
+
+}
 
 // Listens to Windows messages with saintly patience and forwards the weird ones politely.
 wproc :: proc "system"(
@@ -86,6 +89,8 @@ wproc :: proc "system"(
     uMsg: windows.UINT,
     wParam: windows.WPARAM,
     lParam: windows.LPARAM)->windows.LRESULT{
+        context = runtime.default_context()
+
         switch uMsg{
             case windows.WM_CLOSE:
                 windows.DestroyWindow(hwnd)
@@ -97,6 +102,12 @@ wproc :: proc "system"(
             case windows.WM_DESTROY:
                 windows.PostQuitMessage(0)
                 break;
+            
+            case windows.WM_MOUSEMOVE:
+               x := cast(int)windows.GET_X_LPARAM(lParam)
+               y := cast(int)windows.GET_Y_LPARAM(lParam)
+
+               handle_mouse_calls(x,y, .Mouse_Moved)
         }
 
         return windows.DefWindowProcW(

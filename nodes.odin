@@ -2,6 +2,8 @@ package main
 
 import d3d "vendor:directx/d3d11"
 
+
+
 // Lets every size choose its destiny: fixed, flexible, automatic, or boldly percentage-based.
 Size_Mode:: enum{
     Auto,
@@ -96,6 +98,15 @@ NodeType :: enum{
 Rect :: struct{
     x,y : f32,
     width, height : f32,
+}
+
+Input_Event :: enum{
+    Mouse_Moved,
+}
+
+Action_CallBack :: struct{
+    Event : Input_Event,
+    Node : ^Node,
 }
 
 // Unites layout, appearance, and children into one determined little UI organism.

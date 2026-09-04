@@ -34,19 +34,15 @@ error :: distinct string
 
 
 // Persuades the Windows key to work for Thor now, because career growth matters.
-bindWinKey :: proc() -> error {
+bindWinKey :: proc() -> (windows.HHOOK,error) {
 	hook: windows.HHOOK
 	hook = windows.SetWindowsHookExW(windows.WH_KEYBOARD_LL, keyboard_proc, nil, 0)
 	if hook == nil {
 		errcode := windows.GetLastError()
 		fmt.print(errcode)
-		return "error: could not set windows hook (bindWinKey)"
+		return nil, "error: could not set windows hook (bindWinKey)"
 	}
 	defer windows.UnhookWindowsHookEx(hook)
-	msg: windows.MSG
-	for windows.GetMessageW(&msg, nil, 0, 0) > 0 {
-		windows.TranslateMessage(&msg)
-		windows.DispatchMessageW(&msg)
-	}
-	return ""
+	
+	return hook,""
 }

@@ -41,3 +41,17 @@ SamplerState icon_sampler : register(s0);
 float4 RenderIcon(VS_Output input) : SV_Target {
     return icon_texture.Sample(icon_sampler, input.uv) * input.color;
 }
+
+Texture2D font_texture : register(t0);
+
+float4 RenderText(VS_Output input) : SV_Target
+
+{
+    float coverage =
+        font_texture.Sample(icon_sampler, input.uv).r;
+
+    return float4(
+        input.color.rgb,
+        input.color.a * coverage
+    );
+}

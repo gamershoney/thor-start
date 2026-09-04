@@ -2,6 +2,7 @@ package main
 
 import "core:testing"
 
+// Raises a tiny test node that dreams of passing assertions and making us proud.
 make_test_child :: proc(width, height: f32) -> Node {
     return Node{
         layout = Layout{
@@ -11,6 +12,7 @@ make_test_child :: proc(width, height: f32) -> Node {
     }
 }
 
+// Proves rows can wrap under pressure without wrapping up their career.
 @(test)
 layout_row_wraps_to_next_line :: proc(t: ^testing.T) {
     root := Node{
@@ -37,6 +39,7 @@ layout_row_wraps_to_next_line :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.y, f32(25))
 }
 
+// Proves columns know when to turn right instead of marching into the abyss.
 @(test)
 layout_column_wraps_to_next_line :: proc(t: ^testing.T) {
     root := Node{
@@ -63,6 +66,28 @@ layout_column_wraps_to_next_line :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.y, f32(0))
 }
 
+// Confirms the text helper remembers every style choice before sending words into the world.
+@(test)
+new_text_builds_a_styled_text_node :: proc(t: ^testing.T) {
+    style := Text_Style{
+        alignment = .right,
+        color = color_green,
+        font_size = 22,
+        text = "Thunder",
+    }
+
+    node := new_text("test-label", true, style)
+
+    testing.expect_value(t, node.id, "test-label")
+    testing.expect_value(t, node.type, NodeType.Text)
+    testing.expect_value(t, node.static, true)
+    testing.expect_value(t, node.text_style.alignment, Text_Alignment.right)
+    testing.expect_value(t, node.text_style.color, color_green)
+    testing.expect_value(t, node.text_style.font_size, f32(22))
+    testing.expect_value(t, node.text_style.text, "Thunder")
+}
+
+// Ensures padded rows respect personal space, a skill some dialogs never learn.
 @(test)
 layout_row_respects_padding :: proc(t: ^testing.T) {
     root := Node{
@@ -90,6 +115,7 @@ layout_row_respects_padding :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.y, f32(39))
 }
 
+// Ensures padded columns keep healthy boundaries while still moving forward.
 @(test)
 layout_column_respects_padding :: proc(t: ^testing.T) {
     root := Node{
@@ -117,6 +143,7 @@ layout_column_respects_padding :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[2].bounds.y, f32(14))
 }
 
+// Confirms every border side may follow its own beautifully uneven path.
 @(test)
 layout_respects_individual_border_sides :: proc(t: ^testing.T) {
     root := Node{
@@ -149,6 +176,7 @@ layout_respects_individual_border_sides :: proc(t: ^testing.T) {
     testing.expect_value(t, root.children[0].bounds.height, f32(84))
 }
 
+// Verifies disabled borders conserve triangles like tiny GPU environmentalists.
 @(test)
 border_renders_only_enabled_sides :: proc(t: ^testing.T) {
     menu := Menu{}

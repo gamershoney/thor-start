@@ -45,7 +45,8 @@ if (-not $FxcPath -or -not (Test-Path -LiteralPath $FxcPath -PathType Leaf)) {
 $shaders = @(
     @{ Entry = 'RenderV';    Target = 'vs_5_0'; Output = 'ui_vertex.cso' },
     @{ Entry = 'RenderP';    Target = 'ps_5_0'; Output = 'ui_pixel.cso' },
-    @{ Entry = 'RenderIcon'; Target = 'ps_5_0'; Output = 'icon_pixel.cso' }
+    @{ Entry = 'RenderIcon'; Target = 'ps_5_0'; Output = 'icon_pixel.cso' },
+    @{ Entry = 'RenderText'; Target = 'ps_5_0'; Output = 'text_pixel.cso' }
 )
 
 $temporaryOutputs = @()

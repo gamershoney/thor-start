@@ -9,22 +9,26 @@ import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
 import fontstash "vendor:fontstash"
 
+// Holds the application's dimensions like a tiny blueprint with enormous self-esteem.
 Config:: struct{
     width: f32,
     height: f32
 }
 
+// Delivers per-frame facts to the GPU, which appreciates concise motivational briefings.
 Frame_Data :: struct {
     viewport_size : [2]f32,
     padding : [2]f32
 }
 
+// Tells each draw command whether to arrive wearing pixels, texture, or typography.
 Render_Kind :: enum {
     Solid,
     Texture,
     Text
 }
 
+// Packages a draw order so the GPU can succeed without attending another meeting.
 Render_Command :: struct {
     kind:         Render_Kind,
     first_vertex: u32,
@@ -32,6 +36,7 @@ Render_Command :: struct {
     texture:      ^d3d.IShaderResourceView,
 }
 
+// Keeps glyphs, atlases, and buffers organized while making letters feel seen.
 Font_Renderer :: struct { 
     ctx : fontstash.FontContext,
     font_id: int,
@@ -40,6 +45,7 @@ Font_Renderer :: struct {
     srv : ^d3d.IShaderResourceView,
 }
 
+// Carries the entire D3D window operation like a heroic suitcase full of COM pointers.
 Window::struct{
     hwnd: windows.HWND,
     swap_chain: ^dxgi.ISwapChain,
@@ -66,6 +72,7 @@ Window::struct{
     text_pixel_shader : ^d3d.IPixelShader,
 }
 
+// Joins configuration and window state into the launcher that knew it could.
 Menu:: struct{
     config: Config,
     window: Window
@@ -73,6 +80,7 @@ Menu:: struct{
 
 
 
+// Listens to Windows messages with saintly patience and forwards the weird ones politely.
 wproc :: proc "system"(
     hwnd: windows.HWND,
     uMsg: windows.UINT,
@@ -120,6 +128,7 @@ mode_desc : dxgi.MODE_DESC = {
 
 hinstance: windows.HINSTANCE
 
+// Summons a window and rendering device from the Win32 fog with determined optimism.
 window_init :: proc "stdcall" ()->Menu{
     context = runtime.default_context()
 
@@ -245,6 +254,7 @@ clear_color := [4]f32{0.08,0.08,0.08,1}
 
 
 
+// Carries one tiny corner toward the screen with position, color, and UV purpose.
 Vertex :: struct {
     position: [3]f32,
     color: [4]f32,
@@ -252,6 +262,7 @@ Vertex :: struct {
 }
 
 
+// Gives upcoming vertices a dynamic home and reassures them there is room to grow.
 init_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
     context = runtime.default_context()
@@ -285,9 +296,66 @@ init_buffer :: proc "stdcall"(menu:^Menu)->bool{
     return true
 }
 
+// Expands the vertex buffet when the UI arrives hungrier than its original reservation.
+ensure_vertex_capacity :: proc(menu: ^Menu, required: int) -> bool {
+    renderer := &menu.window.vertex_renderer
+    if required <= renderer.vertex_capacity {
+        return true
+    }
+
+    new_capacity := renderer.vertex_capacity
+    if new_capacity <= 0 {
+        new_capacity = 1024
+    }
+    for new_capacity < required {
+        new_capacity *= 2
+    }
+
+    buffer_desc := d3d.BUFFER_DESC{
+        Usage = .DYNAMIC,
+        ByteWidth = u32(new_capacity * size_of(Vertex)),
+        BindFlags = {.VERTEX_BUFFER},
+        CPUAccessFlags = {.WRITE},
+    }
+
+    new_buffer: ^d3d.IBuffer
+    hr := menu.window.device.CreateBuffer(
+        menu.window.device,
+        &buffer_desc,
+        nil,
+        &new_buffer,
+    )
+    if windows.FAILED(hr) {
+        fmt.printfln("vertex buffer growth failed: 0x%08X", hr)
+        return false
+    }
+
+    old_buffer := renderer.vertex_buffer
+    renderer.vertex_buffer = new_buffer
+    renderer.vertex_capacity = new_capacity
+
+    stride := u32(size_of(Vertex))
+    offset: u32
+    menu.window.ctx.IASetVertexBuffers(
+        menu.window.ctx,
+        0,
+        1,
+        &renderer.vertex_buffer,
+        cast([^]u32)&stride,
+        cast([^]u32)&offset,
+    )
+
+    if old_buffer != nil {
+        old_buffer.Release(cast(^windows.IUnknown)old_buffer)
+    }
+
+    return true
+}
+
 ui_vertex := #load("./ui_vertex.cso")
 ui_pixel := #load("./ui_pixel.cso")
 icon_pixel := #load("./icon_pixel.cso")
+// Assembles the graphics pipeline like a motivational speaker with a D3D debugger.
 init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     context = runtime.default_context()
 
@@ -402,6 +470,18 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
     )
     if windows.FAILED(hr) {
         fmt.printfln("CreateIconPixelShader failed: 0x%08X", hr)
+        return false
+    }
+
+    hr = menu.window.device.CreatePixelShader(
+        menu.window.device,
+        raw_data(text_pixel),
+        len(text_pixel),
+        nil,
+        &menu.window.text_pixel_shader,
+    )
+    if windows.FAILED(hr) {
+        fmt.printfln("CreateTextPixelShader failed: 0x%08X", hr)
         return false
     }
 
@@ -534,6 +614,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
 }
 
+// Copies this frame's dreams into GPU memory before reality has time to object.
 build_frame :: proc "system" (menu: ^Menu)->bool{
 
     context = runtime.default_context()
@@ -546,8 +627,7 @@ build_frame :: proc "system" (menu: ^Menu)->bool{
         return true
     }
 
-    if vertex_count > menu.window.vertex_renderer.vertex_capacity {
-        fmt.println("vertex buffer capacity exceeded")
+    if !ensure_vertex_capacity(menu, vertex_count) {
         return false
     }
 
@@ -583,6 +663,7 @@ build_frame :: proc "system" (menu: ^Menu)->bool{
     return true
 }
 
+// Sends every prepared command onto the screen and presents it with theatrical confidence.
 push_frame :: proc (menu:^Menu){
     menu.window.ctx.ClearRenderTargetView(
         menu.window.ctx,
@@ -615,6 +696,22 @@ push_frame :: proc (menu:^Menu){
                     1,
                     &srv
                 )
+            case .Text:
+                menu.window.ctx.PSSetShader(
+                    menu.window.ctx,
+                    menu.window.text_pixel_shader,
+                    nil,
+                    0
+                )
+
+                srv := command.texture
+
+                menu.window.ctx.PSSetShaderResources(
+                    menu.window.ctx,
+                    0,
+                    1,
+                    &srv,
+                )
         }
         menu.window.ctx.Draw(
         menu.window.ctx,
@@ -633,6 +730,7 @@ push_frame :: proc (menu:^Menu){
 }
 
 // The caller retains ownership of icon and owns the returned SRV reference.
+// Helps a humble HICON reinvent itself as a shader resource with excellent career prospects.
 icon_to_texture :: proc "system" (
     icon: windows.HICON,
     menu: ^Menu,
@@ -778,6 +876,9 @@ icon_to_texture :: proc "system" (
     return texture_view
 }
 
+text_pixel := #load("./text_pixel.cso")
+
+// Recruits a font, builds its supporting cast, and prepares every glyph for showtime.
 init_font :: proc(menu:^Menu){
     fontstash.Init(
         &menu.window.font_renderer.ctx,
@@ -791,6 +892,7 @@ init_font :: proc(menu:^Menu){
             "Departure Mono",
             "./fonts/DepartureMono-Regular.otf"
     )
+    menu.window.font_renderer.font_id = dep_mono
 
     fontstash.SetFont(
         &menu.window.font_renderer.ctx,
@@ -821,7 +923,6 @@ init_font :: proc(menu:^Menu){
 
     }
 
-    texture : d3d.ITexture2D
 
     menu.window.device.CreateTexture2D(
         menu.window.device,
@@ -836,8 +937,26 @@ init_font :: proc(menu:^Menu){
         nil,
         &menu.window.font_renderer.srv
     )
+
+
 }
 
+// Refreshes the glyph atlas so newly requested letters never feel left behind.
+update_font_atlas :: proc(menu:^Menu) {
+    font := &menu.window.font_renderer.ctx
+
+    menu.window.ctx.UpdateSubresource(
+        menu.window.ctx,
+        cast(^d3d.IResource)menu.window.font_renderer.texture,
+        0,
+        nil,
+        raw_data(font.textureData),
+        u32(font.width),
+        0,
+    )
+}
+
+// Puts the icon shader in charge and whispers, "You were compiled for this."
 use_icon_shader :: proc(menu:^Menu){
      menu.window.ctx.PSSetShader(
         menu.window.ctx,
@@ -847,6 +966,7 @@ use_icon_shader :: proc(menu:^Menu){
     )
 }
 
+// Hands control back to the solid shader, dependable champion of colorful rectangles.
 use_solid_shader :: proc(menu:^Menu){
     menu.window.ctx.PSSetShader(
         menu.window.ctx,

@@ -9,6 +9,7 @@ foreign import Shell32 "system:shell32.lib"
 import d3d "vendor:directx/d3d11"
 
 
+// Carries Shell secrets across the Win32 wilderness like a tiny, overqualified backpack.
 SHFILEINFOW :: struct {
     hIcon : windows.HICON,
     iIcon : int,
@@ -31,18 +32,21 @@ SHGFI_ICON      :: 0x000000100
 SHGFI_LARGEICON :: 0x000000000
 SHGFI_SMALLICON :: 0x000000001
 
+// Gives every discovered app a name, a path, and the confidence to become clickable someday.
 App_Entry :: struct {
     name : string,
     path : string,
     icon: ^d3d.IShaderResourceView
 }
 
+// Stands heroically empty, ready for whatever Shell abstraction tomorrow throws at it.
 IShellApi : struct {
 
 }
 
 
 
+// Rallies Start Menu shortcuts into formation and gives each one a shiny GPU hat.
 get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
     walker := os.walker_create("C:/ProgramData/Microsoft/Windows/Start Menu/Programs")
     defer os.walker_destroy(&walker)
@@ -80,12 +84,13 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
                 file_info.hIcon,
                 menu)
         windows.DestroyIcon(file_info.hIcon)
-        name := info.name
-            entry := App_Entry{
-                name = name,
-                path = info.fullpath,
-                icon = srv
-            }
+        name := strings.clone(strings.trim_suffix(info.name, ".lnk"))
+        path := strings.clone(info.fullpath)
+        entry := App_Entry{
+            name = name,
+            path = path,
+            icon = srv,
+        }
         append(&entries,entry)
 
     }

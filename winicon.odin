@@ -16,6 +16,7 @@ rawIID: cstring16 : "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}"
 clpointer: windows.GUID
 iuipointer: windows.IID
 windowhandle : cstring16 : "Shell_TrayWnd"
+// Produces the UI Automation class ID with the confidence of a GUID that knows its worth.
 wCLSID :: proc() -> ^windows.GUID {
 	clsid: windows.HRESULT = windows.CLSIDFromString(rawCLSID, &clpointer)
 
@@ -26,6 +27,7 @@ wCLSID :: proc() -> ^windows.GUID {
 	return &clpointer
 }
 
+// Introduces COM to UI Automation using the world's least memorable motivational name tag.
 IID_IUIAutomation :: proc() -> ^windows.IID {
 	iid: windows.HRESULT = windows.IIDFromString(rawIID, &iuipointer)
 	return &iuipointer
@@ -63,21 +65,28 @@ ULW_OPAQUE   :: windows.DWORD(0x00000004)
 automation: ^IUIAutomation = nil
 start_button: ^IUIAutomationElement = nil
 thor_icon_rect: windows.RECT
+// Turns automation complaints into a distinct type that can finally feel special.
 uiAutoErr :: distinct string
 
 
+// Labels COM value kinds with sixteen bits of pure bureaucratic determination.
 VARTYPE :: u16
+// Carries COM status codes that remain brave even when the status is terrible.
 SCODE :: i32
+// Stores automation dates as floating-point time travelers doing their very best.
 DATE :: f64
 
+// Gives COM booleans sixteen dramatic bits to say yes, no, or probably negative one.
 VARIANT_BOOL :: i16
 
 VT_BSTR :: VARTYPE(8)
 
+// Names UI Automation properties so magic numbers can pursue more meaningful careers.
 PROPERTYID :: i32
 
 UIA_AutomationIdPropertyId: PROPERTYID : 30011
 
+// Represents currency with union-powered versatility, despite never buying itself lunch.
 CY :: struct #raw_union {
 	int64:       i64,
 	using parts: struct {
@@ -86,11 +95,13 @@ CY :: struct #raw_union {
 	},
 }
 
+// Carries an automation record and bravely trusts COM to explain the details later.
 BRECORD :: struct {
 	pvRecord: rawptr,
 	pRecInfo: rawptr, // IRecordInfo *
 }
 
+// Accepts nearly any automation value because adaptability looks fantastic on a résumé.
 VARIANT_VALUE :: struct #raw_union {
 	llVal:        i64,
 	lVal:         i32,
@@ -138,6 +149,7 @@ VARIANT_VALUE :: struct #raw_union {
 	using record: BRECORD,
 }
 
+// Gives a VARIANT its type tag and payload, proving identity and substance can coexist.
 VARIANT_BODY :: struct {
 	vt:          VARTYPE,
 	wReserved1:  u16,
@@ -146,6 +158,7 @@ VARIANT_BODY :: struct {
 	using value: VARIANT_VALUE,
 }
 
+// Wraps COM's many possible personalities in one gloriously complicated package.
 VARIANT :: struct #raw_union {
 	using body: VARIANT_BODY,
 	decVal:     windows.DECIMAL,
@@ -155,6 +168,7 @@ VARIANT :: struct #raw_union {
 #assert(size_of(windows.DECIMAL) == 16)
 #assert(size_of(VARIANT) == 24)
 
+// Maps the UI Automation playbook so COM calls can charge ahead in the correct order.
 IUIAutomationVTable :: struct {
 	using unknown:               windows.IUnknownVtbl,
 	compareelements:             rawptr,
@@ -189,10 +203,12 @@ IUIAutomationVTable :: struct {
 	) -> windows.HRESULT,
 }
 
+// Holds the vtable pointer and believes every desktop element can eventually be found.
 IUIAutomation :: struct {
 	lpvtbl: ^IUIAutomationVTable,
 }
 
+// Decides how far through the automation tree our curiosity is allowed to wander.
 TreeScope :: enum i32 {
 	TreeScope_None        = 0,
 	TreeScope_Element     = 0x1,
@@ -203,10 +219,12 @@ TreeScope :: enum i32 {
 	TreeScope_Subtree     = (TreeScope_Element | TreeScope_Children) | TreeScope_Descendants,
 }
 
+// Gives UI Automation a condition to chase, because even COM needs achievable goals.
 IUIAutomationCondition :: struct {
 	lpvtbl: ^windows.IUnknownVtbl,
 }
 
+// Lists every elemental superpower in the exact order COM demands under threat of chaos.
 IUIAutomationElementVTable :: struct {
 	using unknown:                   windows.IUnknownVtbl,
 	SetFocus:                        rawptr,
@@ -260,12 +278,14 @@ IUIAutomationElementVTable :: struct {
 	) -> windows.HRESULT,
 }
 
+// Represents one discoverable piece of Windows UI and its impressive collection of methods.
 IUIAutomationElement :: struct {
 	lpvtbl: ^IUIAutomationElementVTable,
 }
 
 
 
+// Scouts the taskbar through UI Automation and refuses to stop believing in rectangles.
 initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
 	err: uiAutoErr = ""
 	rect :windows.RECT
@@ -374,6 +394,7 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
     return err,rect
 }
 
+// Handles overlay messages while remaining calm, transparent, and above the drama.
 overlay :: proc "system" (
     hwnd : windows.HWND,
     umsg : windows.UINT,
@@ -442,6 +463,7 @@ overlay :: proc "system" (
 }
 
 
+// Repaints Thor's icon so the taskbar remembers who brought the thunder.
 update_thor_icon :: proc "system" (
 	hwnd: windows.HWND,
 	rect: windows.RECT,
@@ -597,6 +619,7 @@ update_thor_icon :: proc "system" (
 }
 
 
+// Creates the Thor overlay and places it boldly where the Start button used to dream.
 drawThorIcon :: proc "system" (rect: windows.RECT){
 
 	context = runtime.default_context()

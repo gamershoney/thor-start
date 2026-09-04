@@ -100,13 +100,20 @@ Rect :: struct{
     width, height : f32,
 }
 
-Input_Event :: enum{
-    Mouse_Moved,
+Event_Mouse_Moved :: struct{
+    x,y : f32,
 }
 
+Input_Event :: union{
+    Event_Mouse_Moved,
+}
+
+Action :: proc(node: ^Node, event: Input_Event)
+
 Action_CallBack :: struct{
-    Event : Input_Event,
-    Node : ^Node,
+    event : Input_Event,
+    node : ^Node,
+    action : Action,
 }
 
 // Unites layout, appearance, and children into one determined little UI organism.
@@ -122,6 +129,8 @@ Node :: struct{
     text_style: Text_Style,
     texture : ^d3d.IShaderResourceView
 }
+
+
 
 // Helps the UI family grow one carefully appended overachiever at a time.
 addChild :: proc(parent: ^Node, child: Node){

@@ -13,7 +13,21 @@ App_State :: struct{
 
 Event_Listeners : [dynamic]Action_CallBack
 
+push_event :: proc(callback : Action_CallBack){
+    append(
+        &Event_Listeners,
+        callback
+    )
+}
 
+signal_event :: proc(input : Input_Event){
+    for event in Event_Listeners{
+        switch i in input{
+            case Event_Mouse_Moved:
+                
+        }
+    }
+}
 
 global_state : ^App_State
 
@@ -51,7 +65,10 @@ main :: proc() {
     push_frame(&global_state.menu)
 
     winkeyHook, err2 := bindWinKey()
+
+
     defer windows.UnhookWindowsHookEx(winkeyHook)
+    defer delete(Event_Listeners)
 
     msg: windows.MSG
 	for windows.GetMessageW(&msg, nil, 0, 0) > 0 {

@@ -110,6 +110,8 @@ Node :: struct{
     bounds : Rect,
     color  : Color,
 
+    Event_Listeners : [dynamic]Action_CallBack,
+
     text_style: Text_Style,
     texture : ^d3d.IShaderResourceView
 }

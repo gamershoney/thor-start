@@ -163,6 +163,14 @@ create_layout :: proc(node: ^Node) {
 // Marches through the UI family tree and makes sure every node gets its moment on screen.
 draw_Tree :: proc(menu:^Menu, node: ^Node){
 
+    for &callback in node.Event_Listeners {
+        callback.node = node
+
+        append(
+            &Event_Listeners,
+            callback
+        )
+    }
 
     switch node.type{
         case .Container, .List:

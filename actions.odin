@@ -26,7 +26,7 @@ Action_CallBack :: struct{
 
 push_event :: proc(callback : Action_CallBack){
     append(
-        &Event_Listeners,
+        &callback.node.Event_Listeners,
         callback
     )
 }

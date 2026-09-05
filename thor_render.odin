@@ -79,10 +79,6 @@ Menu:: struct{
 }
 
 
-handle_mouse_calls :: proc(x:int, y:int, event: Input_Event){
-
-}
-
 // Listens to Windows messages with saintly patience and forwards the weird ones politely.
 wproc :: proc "system"(
     hwnd: windows.HWND,
@@ -104,10 +100,14 @@ wproc :: proc "system"(
                 break;
             
             case windows.WM_MOUSEMOVE:
-               x := cast(int)windows.GET_X_LPARAM(lParam)
-               y := cast(int)windows.GET_Y_LPARAM(lParam)
+               x := cast(f32)windows.GET_X_LPARAM(lParam)
+               y := cast(f32)windows.GET_Y_LPARAM(lParam)
 
-               handle_mouse_calls(x,y, .Mouse_Moved)
+               signal_event(
+                Event_Mouse_Moved{
+                    x = x,
+                    y = y
+               })
         }
 
         return windows.DefWindowProcW(

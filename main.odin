@@ -20,13 +20,35 @@ push_event :: proc(callback : Action_CallBack){
     )
 }
 
+is_in_bounds :: proc(x:f32, y:f32, test:Rect)->bool{
+    
+    //decide x
+    if x < test.x || x > (test.x + test.width){
+        return false
+    }
+
+    //decide y
+    if y < test.y || y > (test.y + test.height){
+        return false
+    }
+
+    return true
+}
+
 signal_event :: proc(input : Input_Event){
-    for event in Event_Listeners{
         switch i in input{
             case Event_Mouse_Moved:
-                
+                for listener in Event_Listeners{
+                    if listener.event != i{
+                        continue
+                    }
+                    if is_in_bounds(i.x,i.y,listener.node.bounds){
+                        listener.action(listener.node,i)
+                    }
+                }
+            //case
         }
-    }
+    
 }
 
 global_state : ^App_State
@@ -46,6 +68,7 @@ main :: proc() {
 	drawThorIcon(rect)
     defer windows.CoUninitialize()
     global_state.menu = window_init()
+
     ok := init_buffer(&global_state.menu)
     if !ok{
         fmt.println("error on init buffer")

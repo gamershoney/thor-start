@@ -56,19 +56,28 @@ main :: proc() {
 
     msg: windows.MSG
 	for windows.GetMessageW(&msg, nil, 0, 0) > 0 {
-        if global_state.dirty{
-            create_layout(&global_state.root)
 
+		windows.TranslateMessage(&msg)
+		windows.DispatchMessageW(&msg)
+
+        if global_state.dirty {
+            clear(&global_state.menu.window.vertex_renderer.vertices)
+            clear(&global_state.menu.window.vertex_renderer.commands)
             clear(&Event_Listeners)
+
+            create_layout(&global_state.root)
 
             draw_Tree(
                 &global_state.menu,
                 &global_state.root,
             )
+
+            build_frame(&global_state.menu)
+            push_frame(&global_state.menu)
+
+            global_state.dirty = false
         }
-		windows.TranslateMessage(&msg)
-		windows.DispatchMessageW(&msg)
-	}
+    }
     fmt.println(err2)
 
 }

@@ -182,7 +182,7 @@ new_app_list :: proc(
         // The entire application row
         app_row := new_container(app.name, false)
 
-        highlight_on_hover(&app_row, &color_red)
+        highlight_on_hover(&app_row, &color_white)
 
         app_row.layout = Layout{
             direction = .Row,

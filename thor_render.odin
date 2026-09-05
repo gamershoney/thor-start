@@ -676,6 +676,14 @@ build_frame :: proc "system" (menu: ^Menu)->bool{
 
 // Sends every prepared command onto the screen and presents it with theatrical confidence.
 push_frame :: proc (menu:^Menu){
+    // Flip-model Present unbinds the back buffer, so restore it every frame.
+    menu.window.ctx.OMSetRenderTargets(
+        menu.window.ctx,
+        1,
+        cast([^]^d3d.IRenderTargetView)&menu.window.render_target,
+        nil,
+    )
+
     menu.window.ctx.ClearRenderTargetView(
         menu.window.ctx,
         menu.window.render_target,

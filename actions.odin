@@ -63,8 +63,11 @@ signal_event :: proc(input : Input_Event){
 }
 
 _hover_action :: proc(node: ^Node, data: rawptr) {
+
     color := cast(^Color)data
     node.color =  color^
+
+    global_state.dirty = true
 }
 
 highlight_on_hover :: proc(node:^Node, hcolor: ^Color){

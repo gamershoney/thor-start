@@ -100,22 +100,6 @@ Rect :: struct{
     width, height : f32,
 }
 
-Event_Mouse_Moved :: struct{
-    x,y : f32,
-}
-
-Input_Event :: union{
-    Event_Mouse_Moved,
-}
-
-Action :: proc(node: ^Node, event: Input_Event)
-
-Action_CallBack :: struct{
-    event : Input_Event,
-    node : ^Node,
-    action : Action,
-}
-
 // Unites layout, appearance, and children into one determined little UI organism.
 Node :: struct{
     id: string,
@@ -195,6 +179,8 @@ new_app_list :: proc(
     for app in start_apps {
         // The entire application row
         app_row := new_container(app.name, false)
+
+        highlight_on_hover(&app_row, &color_red)
 
         app_row.layout = Layout{
             direction = .Row,

@@ -11,45 +11,6 @@ App_State :: struct{
     dirty : bool,
 }
 
-Event_Listeners : [dynamic]Action_CallBack
-
-push_event :: proc(callback : Action_CallBack){
-    append(
-        &Event_Listeners,
-        callback
-    )
-}
-
-is_in_bounds :: proc(x:f32, y:f32, test:Rect)->bool{
-    
-    //decide x
-    if x < test.x || x > (test.x + test.width){
-        return false
-    }
-
-    //decide y
-    if y < test.y || y > (test.y + test.height){
-        return false
-    }
-
-    return true
-}
-
-signal_event :: proc(input : Input_Event){
-        switch i in input{
-            case Event_Mouse_Moved:
-                for listener in Event_Listeners{
-                    if listener.event != i{
-                        continue
-                    }
-                    if is_in_bounds(i.x,i.y,listener.node.bounds){
-                        listener.action(listener.node,i)
-                    }
-                }
-            //case
-        }
-    
-}
 
 global_state : ^App_State
 
@@ -79,11 +40,11 @@ main :: proc() {
         fmt.println("error on set layout and buffer")
         return
     }
-    main := init_tree(global_state.menu.config)
+    global_state.root = init_tree(global_state.menu.config)
     init_font(&global_state.menu)
-    test_tree(&global_state.menu, &main)
-    create_layout(&main)
-    draw_Tree(&global_state.menu, &main)
+    test_tree(&global_state.menu, &global_state.root)
+    create_layout(&global_state.root)
+    draw_Tree(&global_state.menu, &global_state.root)
     build_frame(&global_state.menu)
     push_frame(&global_state.menu)
 
@@ -95,7 +56,16 @@ main :: proc() {
 
     msg: windows.MSG
 	for windows.GetMessageW(&msg, nil, 0, 0) > 0 {
+        if global_state.dirty{
+            create_layout(&global_state.root)
 
+            clear(&Event_Listeners)
+
+            draw_Tree(
+                &global_state.menu,
+                &global_state.root,
+            )
+        }
 		windows.TranslateMessage(&msg)
 		windows.DispatchMessageW(&msg)
 	}

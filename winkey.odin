@@ -42,7 +42,6 @@ bindWinKey :: proc() -> (windows.HHOOK,error) {
 		fmt.print(errcode)
 		return nil, "error: could not set windows hook (bindWinKey)"
 	}
-	defer windows.UnhookWindowsHookEx(hook)
 	
 	return hook,""
 }

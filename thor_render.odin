@@ -106,7 +106,7 @@ wproc :: proc "system"(
                signal_event(
                 Event_Mouse_Moved{
                     x = x,
-                    y = y
+                    y = y,
                })
         }
 

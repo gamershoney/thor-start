@@ -88,7 +88,7 @@ _unhover_action :: proc(node: ^Node, data: rawptr){
 
     color := cast(^Hover_unhover)data
     node.color = color.unhover_color
-
+    node.hovered = false
     global_state.dirty = true
 
 }

@@ -33,6 +33,8 @@ Border :: struct {
     sides: Border_Measurements,
 }
 
+
+
 // Helps text pick a side—or achieve enlightened centering when office politics get intense.
 Text_Alignment :: enum{
     left,
@@ -215,12 +217,12 @@ new_app_list :: proc(
             layout = Layout{
                 width = Size_Value{
                     mode  = .Pixels,
-                    value = 64,
+                    value = global_state.menu.config.app_list_icon_size,
                 },
 
                 height = Size_Value{
                     mode  = .Pixels,
-                    value = 64,
+                    value = global_state.menu.config.app_list_icon_size,
                 },
             },
         }
@@ -230,13 +232,13 @@ new_app_list :: proc(
             false,
             Text_Style{
                 alignment = .left,
-                color = global_state.menu.config.text_color.unhover_color,
+                color = global_state.menu.config.app_list_text_color.unhover_color,
                 font_size = 18,
                 text = app.name,
             },
         )
-        highlight_on_hover(&label, &global_state.menu.config.text_color)
-        revert_on_unhover(&label, &global_state.menu.config.text_color)
+        highlight_on_hover(&label, &global_state.menu.config.app_list_text_color)
+        revert_on_unhover(&label, &global_state.menu.config.app_list_text_color)
         label.layout = Layout{
             width = Size_Value{
                 mode = .Flex,

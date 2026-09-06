@@ -19,10 +19,11 @@ default_config :Config ={
         hover_color = color_white,
         unhover_color = color_blue,
     },
-    text_color = Hover_unhover{
+    app_list_text_color = Hover_unhover{
         hover_color = color_blue,
         unhover_color = color_white,
-    }
+    },
+    app_list_icon_size = 32,
 }
 
 global_state : ^App_State

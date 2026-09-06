@@ -14,7 +14,8 @@ Config :: struct{
     width: f32,
     height: f32,
     app_list_hightlighting : Hover_unhover,
-    text_color : Hover_unhover,
+    app_list_text_color : Hover_unhover,
+    app_list_icon_size : f32,
 }
 
 // Delivers per-frame facts to the GPU, which appreciates concise motivational briefings.

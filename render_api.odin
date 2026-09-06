@@ -227,13 +227,13 @@ draw_text :: proc(menu:^Menu, node: ^Node){
     &quad
    ){
         verts := [6]Vertex{
-            {{quad.x0, quad.y0, 0}, node.text_style.color, {quad.s0, quad.t0}},
-            {{quad.x0, quad.y1, 0}, node.text_style.color, {quad.s0, quad.t1}},
-            {{quad.x1, quad.y0, 0}, node.text_style.color, {quad.s1, quad.t0}},
+            {{quad.x0, quad.y0, 0}, node.color, {quad.s0, quad.t0}},
+            {{quad.x0, quad.y1, 0}, node.color, {quad.s0, quad.t1}},
+            {{quad.x1, quad.y0, 0}, node.color, {quad.s1, quad.t0}},
 
-            {{quad.x1, quad.y0, 0}, node.text_style.color, {quad.s1, quad.t0}},
-            {{quad.x0, quad.y1, 0}, node.text_style.color, {quad.s0, quad.t1}},
-            {{quad.x1, quad.y1, 0}, node.text_style.color, {quad.s1, quad.t1}},
+            {{quad.x1, quad.y0, 0}, node.color, {quad.s1, quad.t0}},
+            {{quad.x0, quad.y1, 0}, node.color, {quad.s0, quad.t1}},
+            {{quad.x1, quad.y1, 0}, node.color, {quad.s1, quad.t1}},
         }
 
         append(&menu.window.vertex_renderer.vertices,

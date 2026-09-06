@@ -6,12 +6,15 @@ Event_Mouse_Moved :: struct{
     x,y : f32,
 }
 
+Event_Mouse_Unhovered :: struct{}
+
 Input_Event :: union{
     Event_Mouse_Moved,
 }
 
 Input_Event_Type :: enum{
     Event_Mouse_Moved,
+    Event_Mouse_Unhovered,
 }
 
 Action :: proc(node: ^Node, data: rawptr)
@@ -47,38 +50,68 @@ is_in_bounds :: proc(x:f32, y:f32, test:Rect)->bool{
 }
 
 signal_event :: proc(input : Input_Event){
-        switch i in input{
-            case Event_Mouse_Moved:
+    switch i in input{
+        case Event_Mouse_Moved:
                 for listener in Event_Listeners{
-                    if listener.event != .Event_Mouse_Moved{
+                    if listener.event != .Event_Mouse_Moved && listener.event != .Event_Mouse_Unhovered{
                         continue
                     }
-                    if is_in_bounds(i.x,i.y,listener.node.bounds){
-                        listener.action(listener.node,listener.data)
+
+                    if is_in_bounds(i.x,i.y,listener.node.bounds) {
+                        if listener.event == .Event_Mouse_Moved{
+                            listener.action(listener.node,listener.data)
+                        }
+                    }else if listener.event == .Event_Mouse_Unhovered && listener.node.hovered{
+                        listener.action(listener.node, listener.data)
                     }
-                }
             //case
-        }
+                }
     
+    }       
+}
+
+Hover_unhover :: struct{
+    hover_color : Color,
+    unhover_color : Color,
 }
 
 _hover_action :: proc(node: ^Node, data: rawptr) {
 
-    color := cast(^Color)data
-    node.color =  color^
-
+    color := cast(^Hover_unhover)data
+    node.color =  color.hover_color
+    node.hovered = true
     global_state.dirty = true
+    
 }
 
-highlight_on_hover :: proc(node:^Node, hcolor: ^Color){
-    
+_unhover_action :: proc(node: ^Node, data: rawptr){
+
+    color := cast(^Hover_unhover)data
+    node.color = color.unhover_color
+
+    global_state.dirty = true
+
+}
+
+highlight_on_hover :: proc(node:^Node, colors: ^Hover_unhover){
     push_event(
         Action_CallBack{
             event = .Event_Mouse_Moved,
             node = node,
             action = _hover_action,
-            data = hcolor
+            data = colors
         }
     )
     
+}
+
+revert_on_unhover :: proc(node: ^Node, colors: ^Hover_unhover){
+    push_event(
+        Action_CallBack{
+            event = .Event_Mouse_Unhovered,
+            node = node,
+            action = _unhover_action,
+            data = colors,
+        }
+    )
 }

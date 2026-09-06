@@ -12,6 +12,19 @@ App_State :: struct{
 }
 
 
+default_config :Config ={
+    width = 600,
+    height = 800,
+    app_list_hightlighting = Hover_unhover{
+        hover_color = color_white,
+        unhover_color = color_blue,
+    },
+    text_color = Hover_unhover{
+        hover_color = color_blue,
+        unhover_color = color_white,
+    }
+}
+
 global_state : ^App_State
 
 // Wakes the entire application up and politely asks Windows not to ruin the vibe.

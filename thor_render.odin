@@ -10,9 +10,11 @@ import d3d "vendor:directx/d3d11"
 import fontstash "vendor:fontstash"
 
 // Holds the application's dimensions like a tiny blueprint with enormous self-esteem.
-Config:: struct{
+Config :: struct{
     width: f32,
-    height: f32
+    height: f32,
+    app_list_hightlighting : Hover_unhover,
+    text_color : Hover_unhover,
 }
 
 // Delivers per-frame facts to the GPU, which appreciates concise motivational briefings.
@@ -144,10 +146,8 @@ window_init :: proc "stdcall" ()->Menu{
     context = runtime.default_context()
 
     menu := Menu{}
-    menu.config = Config{
-        width= 600,
-        height = 800
-    }
+    menu.config = default_config
+
     hinstance = cast(windows.HINSTANCE)windows.GetModuleHandleW(nil)
 
     classname : windows.LPCWSTR = "Thor Start"
@@ -923,10 +923,6 @@ init_font :: proc(menu:^Menu){
         16
     )
 
-    fontstash.SetColor(
-        &menu.window.font_renderer.ctx,
-        font_white
-    )
 
     texture_desc := d3d.TEXTURE2D_DESC{
         Width = 512,

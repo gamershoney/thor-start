@@ -111,6 +111,7 @@ Node :: struct{
     color  : Color,
 
     Event_Listeners : [dynamic]Action_CallBack,
+    hovered: bool,
 
     text_style: Text_Style,
     texture : ^d3d.IShaderResourceView
@@ -155,7 +156,7 @@ new_app_list :: proc(
     list := new_container(id, static)
 
     list.type = .List
-
+    list.color = global_state.menu.config.app_list_hightlighting.unhover_color
     list.layout = Layout{
         width = Size_Value{
             mode  = .Flex,
@@ -182,8 +183,15 @@ new_app_list :: proc(
         // The entire application row
         app_row := new_container(app.name, false)
 
-        highlight_on_hover(&app_row, &color_white)
-
+        highlight_on_hover(
+            &app_row,
+            &global_state.menu.config.app_list_hightlighting
+        )
+        revert_on_unhover(
+            &app_row,
+            &global_state.menu.config.app_list_hightlighting
+        )
+        app_row.color = global_state.menu.config.app_list_hightlighting.unhover_color
         app_row.layout = Layout{
             direction = .Row,
             gap = 8,
@@ -222,11 +230,13 @@ new_app_list :: proc(
             false,
             Text_Style{
                 alignment = .left,
-                color = color_white,
+                color = global_state.menu.config.text_color.unhover_color,
                 font_size = 18,
                 text = app.name,
             },
         )
+        highlight_on_hover(&label, &global_state.menu.config.text_color)
+        revert_on_unhover(&label, &global_state.menu.config.text_color)
         label.layout = Layout{
             width = Size_Value{
                 mode = .Flex,

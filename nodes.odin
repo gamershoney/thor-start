@@ -114,7 +114,8 @@ Node :: struct{
 
     Event_Listeners : [dynamic]Action_CallBack,
     hovered: bool,
-
+    scroll_y : f32,
+    max_scroll_y : f32,
     text_style: Text_Style,
     texture : ^d3d.IShaderResourceView,
 
@@ -161,7 +162,8 @@ new_app_list :: proc(
 ) -> Node {
 
     list := new_container(id, static)
-
+    can_scroll(&list)
+    list.clip_children = true
     list.type = .List
     list.color = global_state.menu.config.app_list_hightlighting.unhover_color
     list.layout = Layout{

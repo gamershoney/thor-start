@@ -114,6 +114,17 @@ wproc :: proc "system"(
                     x = x,
                     y = y,
                })
+
+            case windows.WM_MOUSEWHEEL:
+                delta := f32(windows.GET_WHEEL_DELTA_WPARAM(wParam))
+
+                signal_event(
+                    Event_Mouse_Wheel{
+                        delta = delta,
+                        x = cast(f32)windows.GET_X_LPARAM(lParam),
+                        y = cast(f32)windows.GET_Y_LPARAM(lParam)
+                    }
+                )
         }
 
         return windows.DefWindowProcW(
@@ -531,6 +542,8 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         menu.window.ctx,
         raster_state,
     )
+
+    raster_state.Release(raster_state)
 
     frame_buffer_desc := d3d.BUFFER_DESC{
     Usage          = .DYNAMIC,

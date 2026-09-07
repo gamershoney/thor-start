@@ -202,3 +202,37 @@ border_renders_only_enabled_sides :: proc(t: ^testing.T) {
     testing.expect_value(t, menu.window.vertex_renderer.vertices[6].position[0], f32(10))
     testing.expect_value(t, menu.window.vertex_renderer.vertices[6].position[1], f32(20))
 }
+
+// Keeps ambitious scrolling inside the list instead of letting it launch into orbit.
+@(test)
+layout_clamps_list_scroll_to_content :: proc(t: ^testing.T) {
+    list := Node{
+        type = .List,
+        scroll_y = 999,
+        layout = Layout{
+            direction = .Column,
+            gap = 5,
+            has_border = true,
+            border = Border{sides = {top = 2, bottom = 3}},
+            padding = Padding{top = 5, bottom = 10},
+        },
+        bounds = Rect{width = 100, height = 100},
+    }
+    defer delete(list.children)
+
+    addChild(&list, make_test_child(100, 40))
+    addChild(&list, make_test_child(100, 40))
+    addChild(&list, make_test_child(100, 40))
+
+    create_layout(&list)
+
+    testing.expect_value(t, list.max_scroll_y, f32(50))
+    testing.expect_value(t, list.scroll_y, f32(50))
+    testing.expect_value(t, list.children[0].bounds.y, f32(-43))
+
+    list.scroll_y = -10
+    create_layout(&list)
+
+    testing.expect_value(t, list.scroll_y, f32(0))
+    testing.expect_value(t, list.children[0].bounds.y, f32(7))
+}

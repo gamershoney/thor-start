@@ -8,13 +8,20 @@ Event_Mouse_Moved :: struct{
 
 Event_Mouse_Unhovered :: struct{}
 
+Event_Mouse_Wheel :: struct {
+    delta: f32,
+    x,y : f32,
+}
+
 Input_Event :: union{
     Event_Mouse_Moved,
+    Event_Mouse_Wheel,
 }
 
 Input_Event_Type :: enum{
     Event_Mouse_Moved,
     Event_Mouse_Unhovered,
+    Event_Mouse_Wheel,
 }
 
 Action :: proc(node: ^Node, data: rawptr)
@@ -50,7 +57,7 @@ is_in_bounds :: proc(x:f32, y:f32, test:Rect)->bool{
 }
 
 signal_event :: proc(input : Input_Event){
-    switch i in input{
+    #partial switch i in input{
         case Event_Mouse_Moved:
                 for listener in Event_Listeners{
                     if listener.event != .Event_Mouse_Moved && listener.event != .Event_Mouse_Unhovered{
@@ -66,6 +73,18 @@ signal_event :: proc(input : Input_Event){
                     }
             //case
                 }
+        case Event_Mouse_Wheel:
+            for listener in Event_Listeners{
+                if listener.event != .Event_Mouse_Wheel{
+                    continue
+                }
+
+                if is_in_bounds(i.x,i.y,listener.node.bounds){
+                    delta := i.delta
+                    listener.action(listener.node, &delta)
+                    break
+                }
+            }
     
     }       
 }
@@ -93,6 +112,20 @@ _unhover_action :: proc(node: ^Node, data: rawptr){
 
 }
 
+_scroll_action :: proc(node: ^Node, data: rawptr){
+    delta := cast(^f32)data
+
+    node.scroll_y -= delta^ * 0.25
+
+    if node.scroll_y < 0 {
+        node.scroll_y = 0
+    } else if node.scroll_y > node.max_scroll_y {
+        node.scroll_y = node.max_scroll_y
+    }
+
+    global_state.dirty = true
+}
+
 highlight_on_hover :: proc(node:^Node, colors: ^Hover_unhover){
     push_event(
         Action_CallBack{
@@ -112,6 +145,16 @@ revert_on_unhover :: proc(node: ^Node, colors: ^Hover_unhover){
             node = node,
             action = _unhover_action,
             data = colors,
+        }
+    )
+}
+
+can_scroll :: proc(node: ^Node){
+    push_event(
+        Action_CallBack{
+            event = .Event_Mouse_Wheel,
+            node = node,
+            action = _scroll_action,
         }
     )
 }

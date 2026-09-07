@@ -47,6 +47,7 @@ create_layout :: proc(node: ^Node) {
     total_flex_height: f32
 
     for child in node.children {
+
         #partial switch child.layout.width.mode {
         case .Pixels:
             fixed_width += child.layout.width.value
@@ -117,6 +118,27 @@ create_layout :: proc(node: ^Node) {
         }
     }
 
+    if node.type == .List {
+        content_extent: f32
+        for child in node.children {
+            content_extent += child.bounds.height
+        }
+        if len(node.children) > 1 {
+            content_extent += node.layout.gap * f32(len(node.children) - 1)
+        }
+
+        node.max_scroll_y = content_extent - content_height
+        if node.max_scroll_y < 0 {
+            node.max_scroll_y = 0
+        }
+
+        if node.scroll_y < 0 {
+            node.scroll_y = 0
+        } else if node.scroll_y > node.max_scroll_y {
+            node.scroll_y = node.max_scroll_y
+        }
+    }
+
     cursor_x := content_x
     cursor_y := content_y
     line_extent: f32
@@ -147,7 +169,11 @@ create_layout :: proc(node: ^Node) {
             }
 
             child.bounds.x = cursor_x
-            child.bounds.y = cursor_y
+            if node.type == .List {
+                child.bounds.y = cursor_y - node.scroll_y
+            } else {
+                child.bounds.y = cursor_y
+            }
             cursor_y += child.bounds.height + node.layout.gap
             if child.bounds.width > line_extent {
                 line_extent = child.bounds.width

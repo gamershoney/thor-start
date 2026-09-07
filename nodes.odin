@@ -116,7 +116,12 @@ Node :: struct{
     hovered: bool,
 
     text_style: Text_Style,
-    texture : ^d3d.IShaderResourceView
+    texture : ^d3d.IShaderResourceView,
+
+    clip_children : bool,
+
+    has_clip: bool,
+    clip_bounds: Rect,
 }
 
 

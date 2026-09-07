@@ -187,6 +187,15 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
         draw_border(menu,node)
     }
     for &child in node.children{
+        if node.clip_children{
+            child.has_clip = true
+            child.clip_bounds = node.bounds
+        }else if node.has_clip{
+            child.has_clip = true
+            child.clip_bounds = node.clip_bounds
+        } else {
+            child.has_clip = false
+        }
         draw_Tree(menu,&child)
     }
 
@@ -252,6 +261,9 @@ draw_text :: proc(menu:^Menu, node: ^Node){
                 first_vertex = first,
                 vertex_count = vertex_count,
                 texture = menu.window.font_renderer.srv,
+
+                has_clip = node.has_clip,
+                clip_rect = node.clip_bounds,
             },
         )
     }
@@ -279,6 +291,7 @@ draw_border :: proc (menu:^Menu,node: ^Node){
             },
             color,
             menu,
+            node
         )
     }
 
@@ -293,6 +306,7 @@ draw_border :: proc (menu:^Menu,node: ^Node){
             },
             color,
             menu,
+            node
         )
     }
 
@@ -307,6 +321,7 @@ draw_border :: proc (menu:^Menu,node: ^Node){
             },
             color,
             menu,
+            node
         )
     }
 
@@ -321,13 +336,14 @@ draw_border :: proc (menu:^Menu,node: ^Node){
             },
             color,
             menu,
+            node
         )
     }
 }
 
 
 // Converts one border edge into six vertices of unwavering rectangular determination.
-draw_border_line :: proc(rect:Rect, color:Color,menu:^Menu){
+draw_border_line :: proc(rect:Rect, color:Color,menu:^Menu, node: ^Node){
     if rect.width <= 0 || rect.height <= 0 {
         return
     }
@@ -384,6 +400,9 @@ draw_border_line :: proc(rect:Rect, color:Color,menu:^Menu){
             kind = .Solid,
             first_vertex = first,
             vertex_count = 6,
+
+            has_clip = node.has_clip,
+            clip_rect = node.clip_bounds,
         }
     )
 
@@ -444,6 +463,8 @@ draw_rect:: proc (menu:^Menu, node: ^Node){
             kind = .Solid,
             first_vertex = first,
             vertex_count = 6,
+            has_clip = node.has_clip,
+            clip_rect = node.clip_bounds,
         }
     )
 
@@ -508,6 +529,8 @@ draw_icon :: proc(menu: ^Menu, node: ^Node){
             first_vertex = first,
             vertex_count = 6,
             texture      = node.texture,
+            has_clip = node.has_clip,
+            clip_rect = node.clip_bounds
         },
     )
 }

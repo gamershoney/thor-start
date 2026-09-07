@@ -37,6 +37,9 @@ Render_Command :: struct {
     first_vertex: u32,
     vertex_count: u32,
     texture:      ^d3d.IShaderResourceView,
+
+    has_clip: bool,
+    clip_rect: Rect,
 }
 
 // Keeps glyphs, atlases, and buffers organized while making letters feel seen.
@@ -500,11 +503,15 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
    
 
     raster_desc := d3d.RASTERIZER_DESC{
-    FillMode              = .SOLID,
-    CullMode              = .NONE,
-    FrontCounterClockwise = false,
-    DepthClipEnable       = true,
+        FillMode              = .SOLID,
+        CullMode              = .NONE,
+        FrontCounterClockwise = false,
+        DepthClipEnable       = true,
+        ScissorEnable = true,
+
     }
+
+    reset_sscissor(menu)
 
     raster_state: ^d3d.IRasterizerState
 
@@ -519,6 +526,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
         return false
     }
 
+    
     menu.window.ctx.RSSetState(
         menu.window.ctx,
         raster_state,
@@ -626,6 +634,42 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
 }
 
+apply_scissor :: proc "system"(menu: ^Menu,rect: Rect){
+    vals := [1]d3d.RECT{
+        {
+            top = cast(i32)rect.y,
+            bottom = cast(i32)(rect.y + rect.height),
+            left = cast(i32)rect.x,
+            right = cast(i32)(rect.x + rect.width)
+        }
+    }
+
+    rects : [^]d3d.RECT = raw_data(vals[:])
+
+    menu.window.ctx.RSSetScissorRects(
+        menu.window.ctx,
+        1,
+        rects
+    )
+}
+
+reset_sscissor :: proc "system"(menu: ^Menu){
+    rect := [1]d3d.RECT{{
+        left = 0,
+        top = 0,
+        right = cast(i32)menu.config.width,
+        bottom = cast(i32)menu.config.height,
+    }}
+
+    rects : [^]d3d.RECT = raw_data(rect[:])
+
+    menu.window.ctx.RSSetScissorRects(
+        menu.window.ctx,
+        1,
+        rects
+    )
+}
+
 // Copies this frame's dreams into GPU memory before reality has time to object.
 build_frame :: proc "system" (menu: ^Menu)->bool{
 
@@ -692,6 +736,13 @@ push_frame :: proc (menu:^Menu){
     )
 
     for command in menu.window.vertex_renderer.commands{
+
+        if command.has_clip {
+            apply_scissor(menu, command.clip_rect)
+        }else{
+            reset_sscissor(menu)
+        }
+
         switch command.kind{
            case.Solid:
             menu.window.ctx.PSSetShader(

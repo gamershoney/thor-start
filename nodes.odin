@@ -94,6 +94,7 @@ Node_Type :: enum{
     List = 1,
     Icon = 2,
     Text = 3,
+    Search = 4,
 }
 
 // Defines a rectangular kingdom where width and height may rule with benevolence.
@@ -156,6 +157,21 @@ new_text :: proc(id: string, static: bool, text_style: Text_Style) -> Node {
         text_style = text_style,
     }
 }
+
+new_search_bar :: proc(id: string, static:bool) -> Node {
+    cntnr := new_container("search_bar", false)
+    text := new_text("search_text",false,
+    Text_Style{
+        alignment = .left,
+        color = global_state.menu.config.search_bar_text_color,
+        font_size = global_state.menu.config.search_bar_font_size,
+        text = "Search"
+    })
+
+    add_child(&cntnr,text)
+    return cntnr
+}
+
 // Turns a pile of shortcuts into an orderly list that almost has its life together.
 new_app_list :: proc(
     id: string,
@@ -312,12 +328,34 @@ init_tree:: proc(conf:Config)->Node{
 // Sends the young tree into a practical trial by app list and cheers from the sidelines.
 test_tree :: proc(menu : ^Menu, tree: ^Node){
     main_node := tree
-    
+    app_list := new_app_list("app-list",false,menu)
     add_child(
         main_node,
-        new_app_list("test-list",
-        false,
-        menu))
+        app_list)
+    search := new_search_bar("search-bar",false)
+    add_border(&search,
+    Border{
+        color = color_green,
+        sides = Border_Measurements{
+            top = 10,
+            bottom = 10,
+            left = 10,
+            right = 10,
+        }
+    })
+
+    search.layout = Layout{
+        width = Size_Value{
+            mode = .Percent,
+            value = 100,
+        },
+
+        height = Size_Value{
+            mode = .Flex,
+            value = 1
+        }
+    }
+    
 
 }
 

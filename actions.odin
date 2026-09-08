@@ -161,8 +161,13 @@ signal_event :: proc(input : Input_Event){
 }
 
 Hover_Unhover :: struct{
-    hover_color : Color,
-    unhover_color : Color,
+    hover_color : Color `json:"hover_color"`,
+    unhover_color : Color `json:"unhover_color"`,
+}
+
+Focus_Border :: struct{
+    focused: Color,
+    unfocused: Color,
 }
 
 _hover_action :: proc(node: ^Node, data: rawptr) {

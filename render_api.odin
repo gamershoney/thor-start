@@ -200,7 +200,7 @@ draw_tree :: proc(menu:^Menu, node: ^Node){
     }
 
     switch node.type{
-        case .Container, .List:
+        case .Container, .List, .Search:
             draw_rect(menu,node)
         
         case .Icon:

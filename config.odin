@@ -12,6 +12,9 @@ Config :: struct {
     app_list_text_color: Hover_Unhover   `json:"app_list_text_color"`,
     app_list_icon_size: f32              `json:"app_list_icon_size"`,
     app_list_font_size: f32              `json:"app_list_font_size"`,
+    search_bar_text_color: Color         `json:"search_bar_text_color"`,
+    search_bar_font_size: f32            `json:"search_bar_font_size"`,
+
 }
 
 // Stands ready with sensible values whenever disk access decides to take a personal day.
@@ -28,6 +31,8 @@ default_config: Config = {
     },
     app_list_icon_size = 32,
     app_list_font_size = 17,
+    search_bar_text_color = color_blue,
+    search_bar_font_size = 17,
 }
 
 // Gives every user setting a respectable home instead of making it live beside the executable.
@@ -112,6 +117,6 @@ load_config :: proc() -> Config {
         fmt.printfln("Could not construct the config file path: %v", config_path_err)
         return default_config
     }
-
+    fmt.println("Found dir",config_directory,config_path)
     return load_config_from_path(config_directory, config_path)
 }

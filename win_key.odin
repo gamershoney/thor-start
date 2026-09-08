@@ -16,25 +16,25 @@ is_win_key :: proc(key: u32) -> bool {
 
 // Guards the keyboard hook with the focus of a caffeinated hall monitor.
 keyboard_proc :: proc "stdcall" (
-	nCode: i32,
-	wParam: windows.WPARAM,
-	lParam: windows.LPARAM,
+	code: i32,
+	w_param: windows.WPARAM,
+	l_param: windows.LPARAM,
 ) -> windows.LRESULT {
 	context = runtime.default_context()
-	if nCode < 0 {
-		return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+	if code < 0 {
+		return windows.CallNextHookEx(nil, code, w_param, l_param)
 	}
 
-	is_key_down := wParam == windows.WM_KEYDOWN || wParam == windows.WM_SYSKEYDOWN
-	is_key_up := wParam == windows.WM_KEYUP || wParam == windows.WM_SYSKEYUP
+	is_key_down := w_param == windows.WM_KEYDOWN || w_param == windows.WM_SYSKEYDOWN
+	is_key_up := w_param == windows.WM_KEYUP || w_param == windows.WM_SYSKEYUP
 	if !is_key_down && !is_key_up {
-		return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+		return windows.CallNextHookEx(nil, code, w_param, l_param)
 	}
 
-	kbd := cast(^windows.KBDLLHOOKSTRUCT)(cast(uintptr)lParam)
+	kbd := cast(^windows.KBDLLHOOKSTRUCT)(cast(uintptr)l_param)
 	key := kbd.vkCode
 	if key >= len(keyboard_keys_down) {
-		return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+		return windows.CallNextHookEx(nil, code, w_param, l_param)
 	}
 
 	key_index := int(key)
@@ -59,7 +59,7 @@ keyboard_proc :: proc "stdcall" (
 			}
 		}
 
-		return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+		return windows.CallNextHookEx(nil, code, w_param, l_param)
 	}
 
 	if already_down {
@@ -69,7 +69,14 @@ keyboard_proc :: proc "stdcall" (
 			win_keys_down -= 1
 			if win_keys_down == 0 && win_press_is_standalone {
 				win_press_is_standalone = false
-				fmt.println("winkey pressed")
+				if global_state != nil && global_state.menu.window.hwnd != nil {
+					windows.PostMessageW(
+						global_state.menu.window.hwnd,
+						WM_THOR_TOGGLE_MENU,
+						0,
+						0,
+					)
+				}
 				return 1
 			}
 		} else if non_win_keys_down > 0 {
@@ -77,21 +84,21 @@ keyboard_proc :: proc "stdcall" (
 		}
 	}
 
-	return windows.CallNextHookEx(nil, nCode, wParam, lParam)
+	return windows.CallNextHookEx(nil, code, w_param, l_param)
 }
 
 // Gives failures their own identity so they can grow beyond being ordinary strings.
-error :: distinct string
+Win_Key_Error :: distinct string
 
 
 // Persuades the Windows key to work for Thor now, because career growth matters.
-bindWinKey :: proc() -> (windows.HHOOK,error) {
+bind_win_key :: proc() -> (windows.HHOOK, Win_Key_Error) {
 	hook: windows.HHOOK
 	hook = windows.SetWindowsHookExW(windows.WH_KEYBOARD_LL, keyboard_proc, nil, 0)
 	if hook == nil {
-		errcode := windows.GetLastError()
-		fmt.print(errcode)
-		return nil, "error: could not set windows hook (bindWinKey)"
+		error_code := windows.GetLastError()
+		fmt.print(error_code)
+		return nil, "error: could not set Windows hook (bind_win_key)"
 	}
 	
 	return hook,""

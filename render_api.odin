@@ -182,18 +182,19 @@ create_layout :: proc(node: ^Node) {
     }
 
     for &child in node.children {
+        child.parent = node
         create_layout(&child)
     }
 }
 
 // Marches through the UI family tree and makes sure every node gets its moment on screen.
-draw_Tree :: proc(menu:^Menu, node: ^Node){
+draw_tree :: proc(menu:^Menu, node: ^Node){
 
-    for &callback in node.Event_Listeners {
+    for &callback in node.event_listeners {
         callback.node = node
 
         append(
-            &Event_Listeners,
+            &event_listeners,
             callback
         )
     }
@@ -222,7 +223,7 @@ draw_Tree :: proc(menu:^Menu, node: ^Node){
         } else {
             child.has_clip = false
         }
-        draw_Tree(menu,&child)
+        draw_tree(menu,&child)
     }
 
 

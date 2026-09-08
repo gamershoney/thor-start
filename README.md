@@ -15,6 +15,14 @@ their Windows icons, and converts those icons into D3D11 shader-resource views.
 - A Direct3D 11-capable GPU
 - The Windows SDK shader compiler (`fxc.exe`) when changing HLSL shaders
 
+The Thor icon, Inter Medium font, and compiled shader bytecode are embedded
+into the executable at compile time. They do not need to be distributed as
+loose runtime files.
+
+Inter is distributed under the SIL Open Font License 1.1. Keep
+`fonts/Inter-LICENSE.txt` with source or binary distributions unless the
+license is made available through the application itself.
+
 ## Build and run
 
 ```powershell
@@ -32,17 +40,30 @@ running launcher:
 odin test . -debug -out:layout-tests.exe
 ```
 
+## Configuration
+
+Thor Start reads `%LOCALAPPDATA%\Thor-Start\config.json`. If the file does not
+exist, the application creates it from `default_config`. Existing JSON is
+layered over those defaults, so omitted settings retain their default values.
+If the file cannot be read or parsed, Thor Start continues with the complete
+default configuration.
+
+`app_list_font_size` controls the app-list text size in pixels.
+
 ## Project structure
 
 - `main.odin` — application startup and high-level initialization
+- `config.odin` — JSON discovery, defaults, loading, and first-run creation
 - `thor_render.odin` — Win32 window and Direct3D 11 renderer setup
 - `render_api.odin` — node layout and rectangle geometry generation
 - `nodes.odin` — UI tree, sizing modes, colors, and layout configuration
 - `layout_test.odin` — row and column wrapping tests
 - `app_discover.odin` — Start Menu shortcut and shell-icon discovery
-- `winicon.odin` — taskbar Start-button discovery and Thor icon overlay
-- `winkey.odin` — Windows-key hook and Win32 message loop
+- `win_icon.odin` — taskbar Start-button discovery and Thor icon overlay
+- `win_key.odin` — Windows-key hook and Win32 message loop
 - `hlsl/defshader.hlsl` — UI vertex and pixel shader source
+- `fonts/Inter-Medium.ttf` — embedded UI font source
+- `fonts/Inter-LICENSE.txt` — Inter’s SIL Open Font License
 
 ## Layout
 
@@ -66,36 +87,30 @@ recursively to nested containers.
 
 ## Recompiling shaders
 
-The application loads `ui_vertex.cso` and `ui_pixel.cso` at compile time.
-After editing `hlsl/defshader.hlsl`, rebuild the bytecode:
+The application embeds all four `.cso` files at compile time. After editing
+`hlsl/defshader.hlsl`, rebuild the bytecode with:
 
 ```powershell
-fxc /nologo /T vs_5_0 /E RenderV /Fo ui_vertex.cso hlsl\defshader.hlsl
-fxc /nologo /T ps_5_0 /E RenderP /Fo ui_pixel.cso hlsl\defshader.hlsl
+.\recompile-shaders.ps1
 ```
-
-The HLSL source also contains a `RenderIcon` entry point for the developing
-textured-icon pass.
 
 ## Icon resources
 
-`get_start_apps` finds common Start Menu `.lnk` files with
+`cache_start_apps` finds common Start Menu `.lnk` files once with
 `SHGetFileInfoW`. `icon_to_texture` draws each returned `HICON` into a
-32×32 BGRA bitmap and uploads it as a D3D11 shader-resource view.
+BGRA bitmap and uploads it as a D3D11 shader-resource view. App-list nodes
+retain cache keys rather than owning duplicate app records.
 
 Resource ownership is explicit:
 
 - The caller must destroy each shell `HICON` after conversion.
 - The caller owns every returned shader-resource view and must call
   `Release` when it is no longer needed.
-- The caller owns the dynamic array returned by `get_start_apps`.
+- `destroy_start_app_cache` releases the cached strings, map storage, and GPU
+  icon resources at shutdown.
 
 ## Current limitations
 
-- Textured icons are discovered and uploaded, but are not yet connected to UI
-  nodes or sampled by the active render pass.
 - Only the shared Start Menu directory under `C:/ProgramData` is scanned.
-- The scene is built and presented once before entering the message loop;
-  continuous redraw and resize handling are not implemented yet.
-- Application entry and GPU-resource cleanup still needs to be wired into the
-  launcher lifetime.
+- Taskbar integration depends on Explorer exposing the Start button through
+  Windows UI Automation with the `StartButton` automation ID.

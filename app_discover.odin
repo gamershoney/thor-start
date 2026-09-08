@@ -40,18 +40,21 @@ App_Entry :: struct {
 }
 
 // Stands heroically empty, ready for whatever Shell abstraction tomorrow throws at it.
-IShellApi : struct {
+Shell_API :: struct {
 
 }
 
 
 
-// Rallies Start Menu shortcuts into formation and gives each one a shiny GPU hat.
-get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
+// Rallies Start Menu shortcuts into one reusable cache and gives each a shiny GPU hat.
+cache_start_apps :: proc(menu: ^Menu) {
+    if global_state.apps_discovered {
+        return
+    }
+    global_state.apps_discovered = true
+
     walker := os.walker_create("C:/ProgramData/Microsoft/Windows/Start Menu/Programs")
     defer os.walker_destroy(&walker)
-
-    entries : [dynamic]App_Entry
 
     for info in os.walker_walk(&walker) {
         if path, err := os.walker_error(&walker); err != nil {
@@ -91,9 +94,36 @@ get_start_apps :: proc(menu:^Menu)->[dynamic]App_Entry{
             path = path,
             icon = srv,
         }
-        append(&entries,entry)
+
+        if _, already_cached := global_state.app[path]; already_cached {
+            if entry.icon != nil {
+                entry.icon.Release(cast(^windows.IUnknown)entry.icon)
+            }
+            delete(entry.name)
+            delete(entry.path)
+            continue
+        }
+
+        global_state.app[path] = entry
+        append(&global_state.app_order, path)
 
     }
+}
 
-    return entries
+// Retires cached app resources gracefully after their long career launching things.
+destroy_start_app_cache :: proc(state: ^App_State) {
+    for key in state.app_order {
+        _, entry := delete_key(&state.app, key)
+        if entry.icon != nil {
+            entry.icon.Release(cast(^windows.IUnknown)entry.icon)
+        }
+        delete(entry.name)
+        delete(entry.path)
+    }
+
+    delete(state.app_order)
+    delete(state.app)
+    state.app_order = nil
+    state.app = nil
+    state.apps_discovered = false
 }

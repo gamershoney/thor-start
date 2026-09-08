@@ -89,7 +89,7 @@ Size_Value :: struct{
 
 
 // Assigns every node a role so nobody wanders onto the render stage without a costume.
-NodeType :: enum{
+Node_Type :: enum{
     Container = 0,
     List = 1,
     Icon = 2,
@@ -105,14 +105,16 @@ Rect :: struct{
 // Unites layout, appearance, and children into one determined little UI organism.
 Node :: struct{
     id: string,
-    type: NodeType,
+    type: Node_Type,
+    parent: ^Node,
     children : [dynamic]Node,
     static: bool,
     layout: Layout,
     bounds : Rect,
     color  : Color,
+    app_key: string,
 
-    Event_Listeners : [dynamic]Action_CallBack,
+    event_listeners: [dynamic]Action_Callback,
     hovered: bool,
     scroll_y : f32,
     max_scroll_y : f32,
@@ -128,7 +130,7 @@ Node :: struct{
 
 
 // Helps the UI family grow one carefully appended overachiever at a time.
-addChild :: proc(parent: ^Node, child: Node){
+add_child :: proc(parent: ^Node, child: Node){
     append(&parent.children, child)
 }
 
@@ -165,7 +167,7 @@ new_app_list :: proc(
     can_scroll(&list)
     list.clip_children = true
     list.type = .List
-    list.color = global_state.menu.config.app_list_hightlighting.unhover_color
+    list.color = global_state.menu.config.app_list_highlighting.unhover_color
     list.layout = Layout{
         width = Size_Value{
             mode  = .Flex,
@@ -186,21 +188,26 @@ new_app_list :: proc(
         }
     )
 
-    start_apps := get_start_apps(menu)
+    for app_key in global_state.app_order {
+        app, found := global_state.app[app_key]
+        if !found {
+            continue
+        }
 
-    for app in start_apps {
         // The entire application row
         app_row := new_container(app.name, false)
+        app_row.app_key = app_key
+        launch_on_click(&app_row)
 
         highlight_on_hover(
             &app_row,
-            &global_state.menu.config.app_list_hightlighting
+            &global_state.menu.config.app_list_highlighting
         )
         revert_on_unhover(
             &app_row,
-            &global_state.menu.config.app_list_hightlighting
+            &global_state.menu.config.app_list_highlighting
         )
-        app_row.color = global_state.menu.config.app_list_hightlighting.unhover_color
+        app_row.color = global_state.menu.config.app_list_highlighting.unhover_color
         app_row.layout = Layout{
             direction = .Row,
             gap = 8,
@@ -240,7 +247,7 @@ new_app_list :: proc(
             Text_Style{
                 alignment = .left,
                 color = global_state.menu.config.app_list_text_color.unhover_color,
-                font_size = 18,
+                font_size = global_state.menu.config.app_list_font_size,
                 text = app.name,
             },
         )
@@ -257,9 +264,9 @@ new_app_list :: proc(
             },
         }
 
-        addChild(&app_row, icon)
-        addChild(&app_row, label)
-        addChild(&list, app_row)
+        add_child(&app_row, icon)
+        add_child(&app_row, label)
+        add_child(&list, app_row)
     }
 
     return list
@@ -306,7 +313,7 @@ init_tree:: proc(conf:Config)->Node{
 test_tree :: proc(menu : ^Menu, tree: ^Node){
     main_node := tree
     
-    addChild(
+    add_child(
         main_node,
         new_app_list("test-list",
         false,

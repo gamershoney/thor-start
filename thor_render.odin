@@ -9,15 +9,6 @@ import "core:sys/windows"
 import d3d "vendor:directx/d3d11"
 import fontstash "vendor:fontstash"
 
-// Holds the application's dimensions like a tiny blueprint with enormous self-esteem.
-Config :: struct{
-    width: f32,
-    height: f32,
-    app_list_hightlighting : Hover_unhover,
-    app_list_text_color : Hover_unhover,
-    app_list_icon_size : f32,
-}
-
 // Delivers per-frame facts to the GPU, which appreciates concise motivational briefings.
 Frame_Data :: struct {
     viewport_size : [2]f32,
@@ -88,12 +79,15 @@ Menu:: struct{
 // Listens to Windows messages with saintly patience and forwards the weird ones politely.
 wproc :: proc "system"(
     hwnd: windows.HWND,
-    uMsg: windows.UINT,
-    wParam: windows.WPARAM,
-    lParam: windows.LPARAM)->windows.LRESULT{
+    message: windows.UINT,
+    w_param: windows.WPARAM,
+    l_param: windows.LPARAM)->windows.LRESULT{
         context = runtime.default_context()
 
-        switch uMsg{
+        switch message{
+            case WM_THOR_TOGGLE_MENU:
+                toggle_menu_visibility()
+                return 0
             case windows.WM_CLOSE:
                 windows.DestroyWindow(hwnd)
                 windows.UnregisterClassW(
@@ -106,8 +100,8 @@ wproc :: proc "system"(
                 break;
             
             case windows.WM_MOUSEMOVE:
-               x := cast(f32)windows.GET_X_LPARAM(lParam)
-               y := cast(f32)windows.GET_Y_LPARAM(lParam)
+               x := cast(f32)windows.GET_X_LPARAM(l_param)
+               y := cast(f32)windows.GET_Y_LPARAM(l_param)
 
                signal_event(
                 Event_Mouse_Moved{
@@ -116,22 +110,44 @@ wproc :: proc "system"(
                })
 
             case windows.WM_MOUSEWHEEL:
-                delta := f32(windows.GET_WHEEL_DELTA_WPARAM(wParam))
+                delta := f32(windows.GET_WHEEL_DELTA_WPARAM(w_param))
 
                 signal_event(
                     Event_Mouse_Wheel{
                         delta = delta,
-                        x = cast(f32)windows.GET_X_LPARAM(lParam),
-                        y = cast(f32)windows.GET_Y_LPARAM(lParam)
+                        x = cast(f32)windows.GET_X_LPARAM(l_param),
+                        y = cast(f32)windows.GET_Y_LPARAM(l_param)
                     }
                 )
+            case windows.WM_LBUTTONDOWN:
+                windows.SetCapture(hwnd)
+                signal_event(
+                    Event_Mouse_Pressed{
+                        x = cast(f32)windows.GET_X_LPARAM(l_param),
+                        y = cast(f32)windows.GET_Y_LPARAM(l_param),
+                    },
+                )
+                return 0
+            case windows.WM_LBUTTONUP:
+                signal_event(
+                    Event_Mouse_Released{
+                        x = cast(f32)windows.GET_X_LPARAM(l_param),
+                        y = cast(f32)windows.GET_Y_LPARAM(l_param),
+                    },
+                )
+                if windows.GetCapture() == hwnd {
+                    windows.ReleaseCapture()
+                }
+                return 0
+            case windows.WM_CAPTURECHANGED, windows.WM_CANCELMODE:
+                cancel_pressed_action()
         }
 
         return windows.DefWindowProcW(
             hwnd,
-            uMsg,
-            wParam,
-            lParam
+            message,
+            w_param,
+            l_param
         )
     }
 
@@ -139,7 +155,6 @@ wproc :: proc "system"(
 
 device_flags : d3d.CREATE_DEVICE_FLAGS ={
     .BGRA_SUPPORT,
-    .DEBUG
 }
 
 mode_desc : dxgi.MODE_DESC = {
@@ -157,11 +172,11 @@ mode_desc : dxgi.MODE_DESC = {
 hinstance: windows.HINSTANCE
 
 // Summons a window and rendering device from the Win32 fog with determined optimism.
-window_init :: proc "stdcall" ()->Menu{
+window_init :: proc "stdcall" (config: Config)->Menu{
     context = runtime.default_context()
 
     menu := Menu{}
-    menu.config = default_config
+    menu.config = config
 
     hinstance = cast(windows.HINSTANCE)windows.GetModuleHandleW(nil)
 
@@ -178,7 +193,7 @@ window_init :: proc "stdcall" ()->Menu{
         windows.WS_EX_TOOLWINDOW |windows.WS_EX_TOPMOST,
         classname,
         "ThorStart",
-        windows.WS_VISIBLE| windows.WS_POPUP,
+        windows.WS_POPUP,
         windows.CW_USEDEFAULT,
         windows.CW_USEDEFAULT,
         cast(i32)menu.config.width,
@@ -271,7 +286,6 @@ window_init :: proc "stdcall" ()->Menu{
         1,
         cast([^]d3d.VIEWPORT)&menu.window.viewport
     )
-    windows.ShowWindow(hwnd,1)
     return menu
 }
 
@@ -522,7 +536,7 @@ init_set_layout_and_buffer :: proc "stdcall"(menu:^Menu)->bool{
 
     }
 
-    reset_sscissor(menu)
+    reset_scissor(menu)
 
     raster_state: ^d3d.IRasterizerState
 
@@ -666,7 +680,7 @@ apply_scissor :: proc "system"(menu: ^Menu,rect: Rect){
     )
 }
 
-reset_sscissor :: proc "system"(menu: ^Menu){
+reset_scissor :: proc "system"(menu: ^Menu){
     rect := [1]d3d.RECT{{
         left = 0,
         top = 0,
@@ -753,7 +767,7 @@ push_frame :: proc (menu:^Menu){
         if command.has_clip {
             apply_scissor(menu, command.clip_rect)
         }else{
-            reset_sscissor(menu)
+            reset_scissor(menu)
         }
 
         switch command.kind{
@@ -961,6 +975,7 @@ icon_to_texture :: proc "system" (
 }
 
 text_pixel := #load("./text_pixel.cso")
+inter_medium := #load("./fonts/Inter-Medium.ttf")
 
 // Recruits a font, builds its supporting cast, and prepares every glyph for showtime.
 init_font :: proc(menu:^Menu){
@@ -971,21 +986,22 @@ init_font :: proc(menu:^Menu){
         .TOPLEFT
     )
 
-    dep_mono := fontstash.AddFont(
-            &menu.window.font_renderer.ctx,
-            "Departure Mono",
-            "./fonts/DepartureMono-Regular.otf"
+    inter := fontstash.AddFont(
+        &menu.window.font_renderer.ctx,
+        "Inter Medium",
+        inter_medium,
+        false,
     )
-    menu.window.font_renderer.font_id = dep_mono
+    menu.window.font_renderer.font_id = inter
 
     fontstash.SetFont(
         &menu.window.font_renderer.ctx,
-        dep_mono,
+        inter,
     )
 
     fontstash.SetSize(
         &menu.window.font_renderer.ctx,
-        16
+        menu.config.app_list_font_size,
     )
 
 

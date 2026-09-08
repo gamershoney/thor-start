@@ -25,9 +25,9 @@ layout_row_wraps_to_next_line :: proc(t: ^testing.T) {
     }
     defer delete(root.children)
 
-    addChild(&root, make_test_child(45, 20))
-    addChild(&root, make_test_child(45, 20))
-    addChild(&root, make_test_child(45, 20))
+    add_child(&root, make_test_child(45, 20))
+    add_child(&root, make_test_child(45, 20))
+    add_child(&root, make_test_child(45, 20))
 
     create_layout(&root)
 
@@ -52,9 +52,9 @@ layout_column_wraps_to_next_line :: proc(t: ^testing.T) {
     }
     defer delete(root.children)
 
-    addChild(&root, make_test_child(20, 45))
-    addChild(&root, make_test_child(20, 45))
-    addChild(&root, make_test_child(20, 45))
+    add_child(&root, make_test_child(20, 45))
+    add_child(&root, make_test_child(20, 45))
+    add_child(&root, make_test_child(20, 45))
 
     create_layout(&root)
 
@@ -79,7 +79,7 @@ new_text_builds_a_styled_text_node :: proc(t: ^testing.T) {
     node := new_text("test-label", true, style)
 
     testing.expect_value(t, node.id, "test-label")
-    testing.expect_value(t, node.type, NodeType.Text)
+    testing.expect_value(t, node.type, Node_Type.Text)
     testing.expect_value(t, node.static, true)
     testing.expect_value(t, node.text_style.alignment, Text_Alignment.right)
     testing.expect_value(t, node.text_style.color, color_green)
@@ -101,9 +101,9 @@ layout_row_respects_padding :: proc(t: ^testing.T) {
     }
     defer delete(root.children)
 
-    addChild(&root, make_test_child(35, 20))
-    addChild(&root, make_test_child(35, 20))
-    addChild(&root, make_test_child(35, 20))
+    add_child(&root, make_test_child(35, 20))
+    add_child(&root, make_test_child(35, 20))
+    add_child(&root, make_test_child(35, 20))
 
     create_layout(&root)
 
@@ -129,9 +129,9 @@ layout_column_respects_padding :: proc(t: ^testing.T) {
     }
     defer delete(root.children)
 
-    addChild(&root, make_test_child(20, 35))
-    addChild(&root, make_test_child(20, 35))
-    addChild(&root, make_test_child(20, 35))
+    add_child(&root, make_test_child(20, 35))
+    add_child(&root, make_test_child(20, 35))
+    add_child(&root, make_test_child(20, 35))
 
     create_layout(&root)
 
@@ -166,7 +166,7 @@ layout_respects_individual_border_sides :: proc(t: ^testing.T) {
             height = Size_Value{mode = .Percent, value = 100},
         },
     }
-    addChild(&root, child)
+    add_child(&root, child)
 
     create_layout(&root)
 
@@ -220,9 +220,9 @@ layout_clamps_list_scroll_to_content :: proc(t: ^testing.T) {
     }
     defer delete(list.children)
 
-    addChild(&list, make_test_child(100, 40))
-    addChild(&list, make_test_child(100, 40))
-    addChild(&list, make_test_child(100, 40))
+    add_child(&list, make_test_child(100, 40))
+    add_child(&list, make_test_child(100, 40))
+    add_child(&list, make_test_child(100, 40))
 
     create_layout(&list)
 

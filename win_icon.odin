@@ -8,29 +8,31 @@ import windows "core:sys/windows"
 import "core:image"
 import "core:image/png"
 
+thor_icon_png := #load("./icon.png")
+
 foreign import OleAut32 "system:OleAut32.lib"
 foreign import User32 "system:User32.lib"
 
-rawCLSID: cstring16 : "{ff48dba4-60ef-4201-aa87-54103eef594e}"
-rawIID: cstring16 : "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}"
-clpointer: windows.GUID
-iuipointer: windows.IID
-windowhandle : cstring16 : "Shell_TrayWnd"
+raw_clsid: cstring16 = "{ff48dba4-60ef-4201-aa87-54103eef594e}"
+raw_iid: cstring16 = "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}"
+class_id: windows.GUID
+interface_id: windows.IID
+taskbar_class_name: cstring16 = "Shell_TrayWnd"
 // Produces the UI Automation class ID with the confidence of a GUID that knows its worth.
-wCLSID :: proc() -> ^windows.GUID {
-	clsid: windows.HRESULT = windows.CLSIDFromString(rawCLSID, &clpointer)
+ui_automation_clsid :: proc() -> ^windows.GUID {
+	clsid: windows.HRESULT = windows.CLSIDFromString(raw_clsid, &class_id)
 
 	if clsid < 0 {
 		fmt.printfln("error on cslid: %#x", cast(u32)clsid)
 	}
 
-	return &clpointer
+	return &class_id
 }
 
 // Introduces COM to UI Automation using the world's least memorable motivational name tag.
-IID_IUIAutomation :: proc() -> ^windows.IID {
-	iid: windows.HRESULT = windows.IIDFromString(rawIID, &iuipointer)
-	return &iuipointer
+ui_automation_iid :: proc() -> ^windows.IID {
+	iid: windows.HRESULT = windows.IIDFromString(raw_iid, &interface_id)
+	return &interface_id
 }
 
 foreign OleAut32 {
@@ -65,8 +67,17 @@ ULW_OPAQUE   :: windows.DWORD(0x00000004)
 automation: ^IUIAutomation = nil
 start_button: ^IUIAutomationElement = nil
 thor_icon_rect: windows.RECT
+thor_icon_window: windows.HWND
+taskbar_window: windows.HWND
+taskbar_location_hook: windows.HWINEVENTHOOK
+taskbar_visibility_hook: windows.HWINEVENTHOOK
+
+EVENT_OBJECT_SHOW :: windows.DWORD(0x8002)
+EVENT_OBJECT_HIDE :: windows.DWORD(0x8003)
+EVENT_OBJECT_LOCATIONCHANGE :: windows.DWORD(0x800B)
+WM_THOR_TASKBAR_CHANGED :: windows.UINT(windows.WM_APP + 1)
 // Turns automation complaints into a distinct type that can finally feel special.
-uiAutoErr :: distinct string
+UI_Auto_Error :: distinct string
 
 
 // Labels COM value kinds with sixteen bits of pure bureaucratic determination.
@@ -286,8 +297,8 @@ IUIAutomationElement :: struct {
 
 
 // Scouts the taskbar through UI Automation and refuses to stop believing in rectangles.
-initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
-	err: uiAutoErr = ""
+init_ui_auto :: proc() -> (UI_Auto_Error,windows.RECT) {
+	err: UI_Auto_Error = ""
 	rect :windows.RECT
 
 	hr: windows.HRESULT = windows.CoInitialize(nil)
@@ -296,15 +307,15 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
 		return err,rect
 	}
 	hr = windows.CoCreateInstance(
-		wCLSID(),
+		ui_automation_clsid(),
 		nil,
 		0x1,
-		IID_IUIAutomation(),
+		ui_automation_iid(),
 		cast(^rawptr)&automation,
 	)
 	if cast(i32)hr < 0 {
 		errs := windows.GetLastError()
-		err = cast(uiAutoErr)fmt.tprintf(
+		err = cast(UI_Auto_Error)fmt.tprintf(
 			"error: failure on CoCreateInstance: %#x \n LastCode: %x",
 			cast(u32)hr,
 			errs,
@@ -316,7 +327,7 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
 
     bstr := SysAllocString(cast(^u16)start_btn_txt)
     if bstr == nil {
-        err: uiAutoErr = "error on allocating Start string"
+        err: UI_Auto_Error = "error on allocating Start string"
         return err,rect
     }
 
@@ -336,30 +347,30 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
     )
 
     if cast(i32)hr < 0 {
-        err = cast(uiAutoErr)fmt.tprintf(
+        err = cast(UI_Auto_Error)fmt.tprintf(
             "CreatePropertyContion failed: %#x",
             cast(u32)hr
         )
         return err,rect
     }
 
-    taskbar := windows.FindWindowW(windowhandle, nil)
-    taskelement : ^IUIAutomationElement = nil
+    taskbar := windows.FindWindowW(taskbar_class_name, nil)
+    taskbar_element : ^IUIAutomationElement = nil
 
     hr =automation.lpvtbl.elementfromhandle(
         automation,
         taskbar,
-        &taskelement
+        &taskbar_element
     )
     if cast(i32)hr < 0{
-        err = cast(uiAutoErr)fmt.tprintf(
+        err = cast(UI_Auto_Error)fmt.tprintf(
             "Create task handle failed %#x",cast(u32)hr
         )
         return err,rect
     }
 
-    hr = taskelement.lpvtbl.FindFirst(
-        taskelement,
+    hr = taskbar_element.lpvtbl.FindFirst(
+        taskbar_element,
         .TreeScope_Subtree,
         condition,
         &start_button
@@ -372,7 +383,7 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
     fmt.println("Found StartButton!")
 
     if cast(i32)hr < 0{
-            err = cast(uiAutoErr)fmt.tprintf(
+            err = cast(UI_Auto_Error)fmt.tprintf(
                 "Find first task failed %#x",cast(u32)hr
             )
             return err,rect
@@ -384,7 +395,7 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
     )
 
     if cast(i32)hr < 0{
-		err = cast(uiAutoErr)fmt.tprintf(
+		err = cast(UI_Auto_Error)fmt.tprintf(
 			"Could not assign bounding rectangle: %#x",cast(u32)hr
 		)
 		return err,rect
@@ -392,6 +403,137 @@ initUIAuto :: proc() -> (uiAutoErr,windows.RECT) {
 
 	fmt.print(rect.top,rect.bottom,rect.left,rect.right)
     return err,rect
+}
+
+// Nudges the overlay thread when Explorer announces that the taskbar has moved.
+taskbar_event :: proc "system" (
+	hook: windows.HWINEVENTHOOK,
+	event: windows.DWORD,
+	hwnd: windows.HWND,
+	object_id, child_id: windows.LONG,
+	event_thread, event_time: windows.DWORD,
+) {
+	context = runtime.default_context()
+
+	if thor_icon_window == nil || taskbar_window == nil || hwnd == nil {
+		return
+	}
+	if hwnd != taskbar_window && !windows.IsChild(taskbar_window, hwnd) {
+		return
+	}
+
+	windows.PostMessageW(
+		thor_icon_window,
+		WM_THOR_TASKBAR_CHANGED,
+		windows.WPARAM(event),
+		0,
+	)
+}
+
+// Trades restless timer polling for Explorer events and a calmer taskbar existence.
+start_taskbar_tracking :: proc(icon: windows.HWND) -> bool {
+	stop_taskbar_tracking()
+
+	thor_icon_window = icon
+	taskbar_window = windows.FindWindowW(taskbar_class_name, nil)
+	if taskbar_window == nil {
+		return false
+	}
+
+	process_id: windows.DWORD
+	windows.GetWindowThreadProcessId(taskbar_window, &process_id)
+	if process_id == 0 {
+		return false
+	}
+
+	taskbar_location_hook = windows.SetWinEventHook(
+		EVENT_OBJECT_LOCATIONCHANGE,
+		EVENT_OBJECT_LOCATIONCHANGE,
+		nil,
+		taskbar_event,
+		process_id,
+		0,
+		{.SKIPOWNPROCESS},
+	)
+	taskbar_visibility_hook = windows.SetWinEventHook(
+		EVENT_OBJECT_SHOW,
+		EVENT_OBJECT_HIDE,
+		nil,
+		taskbar_event,
+		process_id,
+		0,
+		{.SKIPOWNPROCESS},
+	)
+
+	if taskbar_location_hook == nil {
+		stop_taskbar_tracking()
+		return false
+	}
+	return true
+}
+
+// Unhooks Explorer politely so shutdown leaves no tiny event-listener ghost behind.
+stop_taskbar_tracking :: proc() {
+	if taskbar_location_hook != nil {
+		windows.UnhookWinEvent(taskbar_location_hook)
+		taskbar_location_hook = nil
+	}
+	if taskbar_visibility_hook != nil {
+		windows.UnhookWinEvent(taskbar_visibility_hook)
+		taskbar_visibility_hook = nil
+	}
+	thor_icon_window = nil
+	taskbar_window = nil
+}
+
+// Reconciles the overlay with the Start button only when Explorer reports a change.
+sync_thor_icon :: proc(hwnd: windows.HWND) {
+	if start_button == nil {
+		return
+	}
+
+	current_rect: windows.RECT
+	hr := start_button.lpvtbl.get_CurrentBoundingRectangle(
+		start_button,
+		&current_rect,
+	)
+	if !windows.SUCCEEDED(hr) {
+		return
+	}
+
+	old_width := thor_icon_rect.right - thor_icon_rect.left
+	old_height := thor_icon_rect.bottom - thor_icon_rect.top
+	new_width := current_rect.right - current_rect.left
+	new_height := current_rect.bottom - current_rect.top
+	if new_width <= 0 || new_height <= 0 {
+		windows.ShowWindow(hwnd, windows.SW_HIDE)
+		return
+	}
+
+	size_changed := old_width != new_width || old_height != new_height
+	position_changed :=
+		thor_icon_rect.left != current_rect.left ||
+		thor_icon_rect.top != current_rect.top
+
+	if size_changed {
+		update_thor_icon(hwnd, current_rect)
+	} else if position_changed {
+		windows.SetWindowPos(
+			hwnd,
+			nil,
+			current_rect.left,
+			current_rect.top,
+			0,
+			0,
+			windows.SWP_NOSIZE |
+			windows.SWP_NOZORDER |
+			windows.SWP_NOACTIVATE |
+			windows.SWP_SHOWWINDOW,
+		)
+		thor_icon_rect = current_rect
+	} else if !windows.IsWindowVisible(hwnd) {
+		windows.ShowWindow(hwnd, windows.SW_SHOWNOACTIVATE)
+	}
 }
 
 // Handles overlay messages while remaining calm, transparent, and above the drama.
@@ -405,54 +547,11 @@ overlay :: proc "system" (
 	context = runtime.default_context()
 
 	switch umsg {
-	case windows.WM_TIMER:
-		if start_button != nil {
-			current_rect: windows.RECT
-			hr := start_button.lpvtbl.get_CurrentBoundingRectangle(
-				start_button,
-				&current_rect,
-			)
-
-			if windows.SUCCEEDED(hr) {
-				old_width := thor_icon_rect.right - thor_icon_rect.left
-				old_height := thor_icon_rect.bottom - thor_icon_rect.top
-				new_width := current_rect.right - current_rect.left
-				new_height := current_rect.bottom - current_rect.top
-				size_changed := old_width != new_width || old_height != new_height
-				position_changed :=
-					thor_icon_rect.left != current_rect.left ||
-					thor_icon_rect.top != current_rect.top
-
-				if size_changed {
-					update_thor_icon(hwnd, current_rect)
-				} else if position_changed {
-					windows.SetWindowPos(
-						hwnd,
-						windows.HWND_TOPMOST,
-						current_rect.left,
-						current_rect.top,
-						0,
-						0,
-						windows.SWP_NOSIZE |
-						windows.SWP_NOACTIVATE |
-						windows.SWP_SHOWWINDOW,
-					)
-					thor_icon_rect = current_rect
-				} else {
-					windows.SetWindowPos(
-						hwnd,
-						windows.HWND_TOPMOST,
-						0, 0, 0, 0,
-						windows.SWP_NOMOVE |
-						windows.SWP_NOSIZE |
-						windows.SWP_NOACTIVATE |
-						windows.SWP_SHOWWINDOW,
-					)
-				}
-			}
-		}
+	case WM_THOR_TASKBAR_CHANGED:
+		sync_thor_icon(hwnd)
+	case windows.WM_NCHITTEST:
+		return windows.LRESULT(windows.HTTRANSPARENT)
     }
-	fmt.println(umsg)
 
     return windows.DefWindowProcW(
         hwnd,
@@ -480,8 +579,8 @@ update_thor_icon :: proc "system" (
 		.alpha_add_if_missing,
 		.alpha_premultiply,
 	}
-	img, err := image.load_from_file(
-		"./icon.png",
+	img, err := image.load_from_bytes(
+		thor_icon_png,
 		options,
 		context.allocator,
 	)
@@ -620,22 +719,26 @@ update_thor_icon :: proc "system" (
 
 
 // Creates the Thor overlay and places it boldly where the Start button used to dream.
-drawThorIcon :: proc "system" (rect: windows.RECT){
+draw_thor_icon :: proc "system" (rect: windows.RECT){
 
 	context = runtime.default_context()
 
-    style :=windows.WS_EX_LAYERED| windows.WS_EX_TOPMOST | windows.WS_EX_TOOLWINDOW|windows.WS_EX_NOACTIVATE
+	style := windows.WS_EX_LAYERED |
+		windows.WS_EX_TOPMOST |
+		windows.WS_EX_TOOLWINDOW |
+		windows.WS_EX_NOACTIVATE |
+		windows.WS_EX_TRANSPARENT
     classname : cstring16 = "Thor Icon Class"
     instance := windows.GetModuleHandleW(nil)
-    wndClass : windows.WNDCLASSW
-    wndClass.lpszClassName = classname
-    wndClass.lpfnWndProc = overlay
-    wndClass.hInstance = cast(windows.HINSTANCE)instance
-	wndClass.hCursor = windows.LoadCursorA(
+    wnd_class : windows.WNDCLASSW
+    wnd_class.lpszClassName = classname
+    wnd_class.lpfnWndProc = overlay
+    wnd_class.hInstance = cast(windows.HINSTANCE)instance
+	wnd_class.hCursor = windows.LoadCursorA(
 		nil,
 		windows.IDC_ARROW
 	)
-	atom := windows.RegisterClassW(&wndClass);
+	atom := windows.RegisterClassW(&wnd_class);
 	if atom == 0 {
 		fmt.printfln(
         "RegisterClassW failed: %d",
@@ -678,15 +781,12 @@ fmt.printfln(
 		windows.DestroyWindow(icon)
 		return
 	}
-    windows.ShowWindow(
+	windows.ShowWindow(
     icon,
     windows.SW_SHOWNOACTIVATE,
 	)
 
-	windows.SetTimer(
-		icon,
-		1,
-		250,
-		nil
-	)
+	if !start_taskbar_tracking(icon) {
+		fmt.println("Could not subscribe to taskbar window events")
+	}
 }

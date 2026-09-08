@@ -92,6 +92,43 @@ partial_config_keeps_unspecified_defaults :: proc(t: ^testing.T) {
     testing.expect_value(t, config.app_list_font_size, f32(23))
     testing.expect_value(t, config.width, default_config.width)
     testing.expect_value(t, config.app_list_icon_size, default_config.app_list_icon_size)
+    testing.expect_value(t, config.background_color, default_config.background_color)
+    testing.expect_value(t, config.search_bar_background_color, default_config.search_bar_background_color)
+    testing.expect_value(t, config.search_bar_border.color, default_config.search_bar_border.color)
+}
+
+@(test)
+theme_config_round_trips_custom_colors :: proc(t: ^testing.T) {
+    directory, path, ok := make_test_config_paths(t)
+    if !ok {
+        return
+    }
+    defer destroy_test_config_paths(directory, path)
+
+    custom := default_config
+    custom.background_color = {0.1, 0.2, 0.3, 1}
+    custom.app_list_highlighting.hover_color = {0.3, 0.4, 0.5, 1}
+    custom.app_list_highlighting.unhover_color = {0.2, 0.3, 0.4, 1}
+    custom.app_list_text_color.unhover_color = {0.8, 0.7, 0.6, 1}
+    custom.app_list_border = {color = {0.5, 0.4, 0.3, 1}, sides = {right = 3}}
+    custom.search_bar_background_color = {0.4, 0.3, 0.2, 1}
+    custom.search_bar_text_color = {0.9, 0.8, 0.7, 1}
+    custom.search_bar_border = {color = {0.6, 0.5, 0.4, 1}, sides = {bottom = 2}}
+    if !testing.expect(t, write_config_file(path, custom)) {
+        return
+    }
+    loaded := load_config_from_path(directory, path)
+    testing.expect_value(t, loaded.background_color, custom.background_color)
+    testing.expect_value(t, loaded.app_list_highlighting.hover_color, custom.app_list_highlighting.hover_color)
+    testing.expect_value(t, loaded.app_list_highlighting.unhover_color, custom.app_list_highlighting.unhover_color)
+    testing.expect_value(t, loaded.app_list_text_color.unhover_color, custom.app_list_text_color.unhover_color)
+    testing.expect_value(t, loaded.app_list_border.color, custom.app_list_border.color)
+    testing.expect_value(t, loaded.app_list_border.sides.right, f32(3))
+    testing.expect_value(t, loaded.search_bar_background_color, custom.search_bar_background_color)
+    testing.expect_value(t, loaded.search_bar_text_color, custom.search_bar_text_color)
+    testing.expect_value(t, loaded.search_bar_border.color, custom.search_bar_border.color)
+    testing.expect_value(t, loaded.search_bar_border.sides.bottom, f32(2))
+    testing.expect_value(t, init_tree(loaded).color, custom.background_color)
 }
 
 // Ensures malformed JSON gets benched while the defaults confidently finish the game.

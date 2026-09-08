@@ -67,6 +67,27 @@ default configuration.
 
 ## Layout
 
+### Theme customization
+
+The top bar's **Edit config** button opens the same JSON file used at startup
+in Notepad. Save your changes and restart Thor Start to apply them.
+Its appearance is configurable through `top_bar_background_color`,
+`top_bar_text_color`, `top_bar_border`, `top_bar_font_size`,
+`config_button_highlighting`, and `config_button_text_color`.
+
+The default slate/ice palette is declared in `colors.odin` and assigned to UI
+roles in `default_config` in `config.odin`. The loaded JSON config remains the
+source of truth: colors are normalized RGBA arrays (`[r, g, b, a]`, each 0–1).
+Customize `background_color`, `app_list_highlighting`, `app_list_text_color`,
+`app_list_border`, `search_bar_background_color`, `search_bar_text_color`,
+and `search_bar_border`. Borders contain `color` and `sides` (top, bottom,
+left, right in pixels; zero disables a side).
+
+Existing config files are not overwritten. Missing fields use the new defaults,
+but previously saved colors still override them. To adopt the new palette,
+remove the old color overrides from your JSON, or back up the config and remove
+it to regenerate all defaults on the next launch. Restart after editing.
+
 A container controls how its direct children are placed:
 
 ```odin
@@ -108,6 +129,18 @@ Resource ownership is explicit:
   `Release` when it is no longer needed.
 - `destroy_start_app_cache` releases the cached strings, map storage, and GPU
   icon resources at shutdown.
+
+## Searching apps
+
+Type while the menu is open to filter cached app names (case-insensitive).
+Up/Down selects a result and keeps it in view; Enter launches it. Click a
+result to launch with the mouse. Escape clears a query, then closes the menu
+when the query is empty.
+
+The search field supports Unicode typing, Backspace/Delete, Left/Right,
+Home/End, and Ctrl+V paste. A vertical bar marks the insertion point.
+Queries are limited to 1024 UTF-8 bytes. Search currently targets cached
+Start Menu apps, not files or web results.
 
 ## Current limitations
 

@@ -1,9 +1,32 @@
 package main
 
 import "core:fmt"
+import "core:os"
 import windows "core:sys/windows"
 
 event_listeners: [dynamic]Action_Callback
+
+edit_config :: proc(node: ^Node, data: rawptr) {
+    if global_state == nil do return
+    directory, path, ok := config_file_paths()
+    if !ok do return
+    // Recover a deleted config without overwriting an existing customization.
+    if !os.exists(path) {
+        if err := os.make_directory_all(directory); err != nil {
+            fmt.printfln("Could not create config directory: %v", err)
+            return
+        }
+        if !write_config_file(path, global_state.menu.config) do return
+    }
+    arguments := windows.utf8_to_wstring(fmt.tprintf("\"%s\"", path))
+    if arguments == nil do return
+    result := windows.ShellExecuteW(nil, nil, windows.utf8_to_wstring("notepad.exe"), arguments, nil, windows.SW_SHOWNORMAL)
+    if cast(uintptr)result <= 32 {
+        fmt.printfln("Could not open config in Notepad (code %d)", cast(uintptr)result)
+        return
+    }
+    set_menu_hidden(true)
+}
 
 Event_Mouse_Moved :: struct{
     x,y : f32,
@@ -175,6 +198,14 @@ _hover_action :: proc(node: ^Node, data: rawptr) {
     color := cast(^Hover_Unhover)data
     node.color =  color.hover_color
     node.hovered = true
+    if node.app_key != "" && node.parent != nil {
+        for &row, index in node.parent.children {
+            if &row == node {
+                global_state.search.selected = index
+                break
+            }
+        }
+    }
     global_state.dirty = true
     
 }
@@ -234,7 +265,9 @@ _launch_app :: proc(node: ^Node, data: rawptr){
     )
     if cast(uintptr)result <= 32 {
         fmt.printfln("Could not launch %s (ShellExecuteW code %d)", app.path, cast(uintptr)result)
+        return
     }
+    set_menu_hidden(true)
 }
 
 highlight_on_hover :: proc(node:^Node, colors: ^Hover_Unhover){

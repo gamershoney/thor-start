@@ -8,12 +8,22 @@ import "core:os"
 Config :: struct {
     width: f32                           `json:"width"`,
     height: f32                          `json:"height"`,
+    background_color: Color             `json:"background_color"`,
+    app_list_border: Border              `json:"app_list_border"`,
+    search_bar_background_color: Color  `json:"search_bar_background_color"`,
+    search_bar_border: Border            `json:"search_bar_border"`,
     app_list_highlighting: Hover_Unhover `json:"app_list_highlighting"`,
     app_list_text_color: Hover_Unhover   `json:"app_list_text_color"`,
     app_list_icon_size: f32              `json:"app_list_icon_size"`,
     app_list_font_size: f32              `json:"app_list_font_size"`,
     search_bar_text_color: Color         `json:"search_bar_text_color"`,
     search_bar_font_size: f32            `json:"search_bar_font_size"`,
+    top_bar_background_color: Color      `json:"top_bar_background_color"`,
+    top_bar_text_color: Color            `json:"top_bar_text_color"`,
+    top_bar_border: Border               `json:"top_bar_border"`,
+    top_bar_font_size: f32               `json:"top_bar_font_size"`,
+    config_button_highlighting: Hover_Unhover `json:"config_button_highlighting"`,
+    config_button_text_color: Color      `json:"config_button_text_color"`,
 
 }
 
@@ -21,18 +31,31 @@ Config :: struct {
 default_config: Config = {
     width = 600,
     height = 800,
+    background_color = color_slate_base,
+    app_list_border = {color = color_slate_border, sides = {right = 1}},
+    search_bar_background_color = color_slate_surface,
+    search_bar_border = {
+        color = color_ice_accent,
+        sides = {top = 1, bottom = 1, left = 1, right = 1},
+    },
     app_list_highlighting = Hover_Unhover {
-        hover_color = color_white,
-        unhover_color = color_blue,
+        hover_color = color_slate_hover,
+        unhover_color = color_slate_base,
     },
     app_list_text_color = Hover_Unhover {
-        hover_color = color_blue,
-        unhover_color = color_white,
+        hover_color = color_white,
+        unhover_color = color_text_primary,
     },
     app_list_icon_size = 32,
     app_list_font_size = 17,
-    search_bar_text_color = color_blue,
+    search_bar_text_color = color_text_muted,
     search_bar_font_size = 17,
+    top_bar_background_color = color_slate_surface,
+    top_bar_text_color = color_text_primary,
+    top_bar_border = {color = color_slate_border, sides = {bottom = 1}},
+    top_bar_font_size = 15,
+    config_button_highlighting = {hover_color = color_slate_hover, unhover_color = color_slate_surface},
+    config_button_text_color = color_ice_accent,
 }
 
 // Gives every user setting a respectable home instead of making it live beside the executable.
@@ -94,10 +117,18 @@ load_config_from_path :: proc(config_directory, config_path: string) -> Config {
 
 // Discovers the operating system's preferred config shelf and brings back the best available settings.
 load_config :: proc() -> Config {
+    directory, path, ok := config_file_paths()
+    if !ok do return default_config
+    return load_config_from_path(directory, path)
+}
+
+// Both startup and the editor button resolve the exact same file.
+// Returned paths use the temporary allocator.
+config_file_paths :: proc() -> (directory, path: string, ok: bool) {
     user_config_directory, user_directory_err := os.user_config_dir(context.temp_allocator)
     if user_directory_err != nil {
         fmt.printfln("Could not discover the user config directory: %v", user_directory_err)
-        return default_config
+        return "", "", false
     }
 
     config_directory, directory_path_err := os.join_path(
@@ -106,7 +137,7 @@ load_config :: proc() -> Config {
     )
     if directory_path_err != nil {
         fmt.printfln("Could not construct the config directory path: %v", directory_path_err)
-        return default_config
+        return "", "", false
     }
 
     config_path, config_path_err := os.join_path(
@@ -115,8 +146,7 @@ load_config :: proc() -> Config {
     )
     if config_path_err != nil {
         fmt.printfln("Could not construct the config file path: %v", config_path_err)
-        return default_config
+        return "", "", false
     }
-    fmt.println("Found dir",config_directory,config_path)
-    return load_config_from_path(config_directory, config_path)
+    return config_directory, config_path, true
 }

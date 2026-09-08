@@ -16,6 +16,7 @@ App_State :: struct{
     app: map[string]App_Entry,
     app_order: [dynamic]string,
     apps_discovered: bool,
+    search: Search_State,
 }
 
 
@@ -58,6 +59,9 @@ toggle_menu_visibility :: proc() {
 main :: proc() {
 
     state := App_State{hidden = true}
+    defer delete(state.search.query)
+    defer delete(state.search.display)
+    defer destroy_ui_tree(&state.root)
 
     global_state = &state
     state.app = make(map[string]App_Entry)
@@ -90,6 +94,7 @@ main :: proc() {
     cache_start_apps(&global_state.menu)
     test_tree(&global_state.menu, &global_state.root)
     create_layout(&global_state.root)
+    select_search_result(&state, 0)
     draw_tree(&global_state.menu, &global_state.root)
     build_frame(&global_state.menu)
     push_frame(&global_state.menu)
@@ -106,6 +111,10 @@ main :: proc() {
 
 		windows.TranslateMessage(&msg)
 		windows.DispatchMessageW(&msg)
+
+        if state.search.changed {
+            rebuild_search_results(&state)
+        }
 
         if global_state.dirty {
             clear(&global_state.menu.window.vertex_renderer.vertices)

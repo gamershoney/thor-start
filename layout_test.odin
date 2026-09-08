@@ -2,6 +2,69 @@ package main
 
 import "core:testing"
 
+// A full-width search bar must not consume a column sibling's width.
+@(test)
+layout_column_search_preserves_list_width :: proc(t: ^testing.T) {
+    root := Node{
+        bounds = {x = 10, y = 20, width = 600, height = 800},
+        layout = {direction = .Column, gap = 8},
+    }
+    defer delete(root.children)
+    add_child(&root, Node{
+        layout = {
+            width = {mode = .Flex, value = 1},
+            height = {mode = .Flex, value = 1},
+        },
+    })
+    add_child(&root, Node{
+        layout = {
+            width = {mode = .Percent, value = 100},
+            height = {mode = .Pixels, value = 48},
+        },
+    })
+
+    create_layout(&root)
+    testing.expect_value(t, root.children[0].bounds, Rect{10, 20, 600, 744})
+    testing.expect_value(t, root.children[1].bounds, Rect{10, 772, 600, 48})
+    // Repeated layout must not shrink the available width.
+    create_layout(&root)
+    testing.expect_value(t, root.children[0].bounds, Rect{10, 20, 600, 744})
+}
+
+// Cross-axis flex fills the content box; main-axis flex still shares by weight.
+@(test)
+layout_row_flex_respects_axes_and_insets :: proc(t: ^testing.T) {
+    root := Node{
+        bounds = {x = 10, y = 20, width = 320, height = 120},
+        layout = {
+            direction = .Row,
+            gap = 10,
+            has_border = true,
+            border = {sides = {top = 2, bottom = 2, left = 2, right = 2}},
+            padding = {left = 8, right = 8, top = 8, bottom = 8},
+        },
+    }
+    defer delete(root.children)
+    add_child(&root, Node{
+        layout = {
+            width = {mode = .Pixels, value = 40},
+            height = {mode = .Percent, value = 100},
+        },
+    })
+    for weight in 1..<3 {
+        add_child(&root, Node{
+            layout = {
+                width = {mode = .Flex, value = f32(weight)},
+                height = {mode = .Flex, value = 1},
+            },
+        })
+    }
+    create_layout(&root)
+    testing.expect_value(t, root.children[0].bounds, Rect{20, 30, 40, 100})
+    testing.expect_value(t, root.children[1].bounds, Rect{70, 30, 80, 100})
+    testing.expect_value(t, root.children[2].bounds, Rect{160, 30, 160, 100})
+}
+
 // Raises a tiny test node that dreams of passing assertions and making us proud.
 make_test_child :: proc(width, height: f32) -> Node {
     return Node{

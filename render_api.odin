@@ -99,7 +99,11 @@ create_layout :: proc(node: ^Node) {
         case .Percent:
             child.bounds.width = content_width * child.layout.width.value / 100.0
         case .Flex:
-            if total_flex_width > 0 {
+            child.bounds.width = 0
+            // Column siblings share height; each can fill the content width.
+            if node.layout.direction == .Column {
+                child.bounds.width = content_width
+            } else if total_flex_width > 0 {
                 child.bounds.width =
                     remaining_width * child.layout.width.value / total_flex_width
             }
@@ -111,7 +115,11 @@ create_layout :: proc(node: ^Node) {
         case .Percent:
             child.bounds.height = content_height * child.layout.height.value / 100.0
         case .Flex:
-            if total_flex_height > 0 {
+            child.bounds.height = 0
+            // Row siblings share width; each can fill the content height.
+            if node.layout.direction == .Row {
+                child.bounds.height = content_height
+            } else if total_flex_height > 0 {
                 child.bounds.height =
                     remaining_height * child.layout.height.value / total_flex_height
             }
@@ -189,6 +197,9 @@ create_layout :: proc(node: ^Node) {
 
 // Marches through the UI family tree and makes sure every node gets its moment on screen.
 draw_tree :: proc(menu:^Menu, node: ^Node){
+
+    // Keep the Enter target visibly selected even after the mouse leaves it.
+    apply_search_selection_color(node)
 
     for &callback in node.event_listeners {
         callback.node = node

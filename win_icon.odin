@@ -71,7 +71,11 @@ thor_icon_window: windows.HWND
 taskbar_window: windows.HWND
 taskbar_location_hook: windows.HWINEVENTHOOK
 taskbar_visibility_hook: windows.HWINEVENTHOOK
+foreground_hook: windows.HWINEVENTHOOK
+desktop_switch_hook: windows.HWINEVENTHOOK
 
+EVENT_SYSTEM_FOREGROUND :: windows.DWORD(0x0003)
+EVENT_SYSTEM_DESKTOPSWITCH :: windows.DWORD(0x0020)
 EVENT_OBJECT_SHOW :: windows.DWORD(0x8002)
 EVENT_OBJECT_HIDE :: windows.DWORD(0x8003)
 EVENT_OBJECT_LOCATIONCHANGE :: windows.DWORD(0x800B)
@@ -405,7 +409,7 @@ init_ui_auto :: proc() -> (UI_Auto_Error,windows.RECT) {
     return err,rect
 }
 
-// Nudges the overlay thread when Explorer announces that the taskbar has moved.
+// Queue refreshes for taskbar changes and foreground/desktop transitions.
 taskbar_event :: proc "system" (
 	hook: windows.HWINEVENTHOOK,
 	event: windows.DWORD,
@@ -415,11 +419,16 @@ taskbar_event :: proc "system" (
 ) {
 	context = runtime.default_context()
 
-	if thor_icon_window == nil || taskbar_window == nil || hwnd == nil {
+	if thor_icon_window == nil {
 		return
 	}
-	if hwnd != taskbar_window && !windows.IsChild(taskbar_window, hwnd) {
-		return
+	if event != EVENT_SYSTEM_FOREGROUND && event != EVENT_SYSTEM_DESKTOPSWITCH {
+		if taskbar_window == nil || hwnd == nil {
+			return
+		}
+		if hwnd != taskbar_window && !windows.IsChild(taskbar_window, hwnd) {
+			return
+		}
 	}
 
 	windows.PostMessageW(
@@ -465,7 +474,17 @@ start_taskbar_tracking :: proc(icon: windows.HWND) -> bool {
 		{.SKIPOWNPROCESS},
 	)
 
-	if taskbar_location_hook == nil {
+	foreground_hook = windows.SetWinEventHook(
+		EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
+		nil, taskbar_event, 0, 0, {},
+	)
+	desktop_switch_hook = windows.SetWinEventHook(
+		EVENT_SYSTEM_DESKTOPSWITCH, EVENT_SYSTEM_DESKTOPSWITCH,
+		nil, taskbar_event, 0, 0, {},
+	)
+
+	if taskbar_location_hook == nil || taskbar_visibility_hook == nil ||
+	   foreground_hook == nil || desktop_switch_hook == nil {
 		stop_taskbar_tracking()
 		return false
 	}
@@ -474,6 +493,14 @@ start_taskbar_tracking :: proc(icon: windows.HWND) -> bool {
 
 // Unhooks Explorer politely so shutdown leaves no tiny event-listener ghost behind.
 stop_taskbar_tracking :: proc() {
+	if foreground_hook != nil {
+		windows.UnhookWinEvent(foreground_hook)
+		foreground_hook = nil
+	}
+	if desktop_switch_hook != nil {
+		windows.UnhookWinEvent(desktop_switch_hook)
+		desktop_switch_hook = nil
+	}
 	if taskbar_location_hook != nil {
 		windows.UnhookWinEvent(taskbar_location_hook)
 		taskbar_location_hook = nil
@@ -486,7 +513,7 @@ stop_taskbar_tracking :: proc() {
 	taskbar_window = nil
 }
 
-// Reconciles the overlay with the Start button only when Explorer reports a change.
+// Reconciles the overlay geometry and stacking order after shell events.
 sync_thor_icon :: proc(hwnd: windows.HWND) {
 	if start_button == nil {
 		return
@@ -511,28 +538,23 @@ sync_thor_icon :: proc(hwnd: windows.HWND) {
 	}
 
 	size_changed := old_width != new_width || old_height != new_height
-	position_changed :=
-		thor_icon_rect.left != current_rect.left ||
-		thor_icon_rect.top != current_rect.top
-
-	if size_changed {
-		update_thor_icon(hwnd, current_rect)
-	} else if position_changed {
-		windows.SetWindowPos(
+	if size_changed && !update_thor_icon(hwnd, current_rect) {
+		return
+	}
+	// Explorer can cover a still-visible topmost window without moving it.
+	// Raise the overlay again, but never activate it or steal keyboard focus.
+	if windows.SetWindowPos(
 			hwnd,
-			nil,
+			windows.HWND_TOPMOST,
 			current_rect.left,
 			current_rect.top,
 			0,
 			0,
 			windows.SWP_NOSIZE |
-			windows.SWP_NOZORDER |
 			windows.SWP_NOACTIVATE |
 			windows.SWP_SHOWWINDOW,
-		)
+		) {
 		thor_icon_rect = current_rect
-	} else if !windows.IsWindowVisible(hwnd) {
-		windows.ShowWindow(hwnd, windows.SW_SHOWNOACTIVATE)
 	}
 }
 

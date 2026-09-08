@@ -159,15 +159,22 @@ new_text :: proc(id: string, static: bool, text_style: Text_Style) -> Node {
 }
 
 new_search_bar :: proc(id: string, static:bool) -> Node {
-    cntnr := new_container("search_bar", false)
+    cntnr := new_container(id, static)
+    cntnr.type = .Search
+    cntnr.clip_children = true
+    cntnr.color = global_state.menu.config.search_bar_background_color
     text := new_text("search_text",false,
     Text_Style{
         alignment = .left,
         color = global_state.menu.config.search_bar_text_color,
         font_size = global_state.menu.config.search_bar_font_size,
-        text = "Search"
+        text = search_display_text(&global_state.search),
     })
 
+    text.layout = Layout{
+        width = {mode = .Flex, value = 1},
+        height = {mode = .Percent, value = 100},
+    }
     add_child(&cntnr,text)
     return cntnr
 }
@@ -198,15 +205,12 @@ new_app_list :: proc(
 
     add_border(
         &list,
-        Border{
-            color = color_white,
-            sides = {right = 2},
-        }
+        menu.config.app_list_border,
     )
 
     for app_key in global_state.app_order {
         app, found := global_state.app[app_key]
-        if !found {
+        if !found || !search_matches(app.name, string(global_state.search.query[:])) {
             continue
         }
 
@@ -285,6 +289,15 @@ new_app_list :: proc(
         add_child(&list, app_row)
     }
 
+    if len(list.children) == 0 {
+        empty := new_text("search-empty", true, Text_Style{
+            text = "No apps found",
+            color = menu.config.search_bar_text_color,
+            font_size = menu.config.app_list_font_size,
+        })
+        empty.layout = {width = {mode = .Percent, value = 100}, height = {mode = .Pixels, value = 72}}
+        add_child(&list, empty)
+    }
     return list
 }
 
@@ -311,7 +324,7 @@ init_tree:: proc(conf:Config)->Node{
                 value = 100,
             }
         },
-        color = color_blue,
+        color = conf.background_color,
         bounds = Rect{
             x = 0,
             y = 0,
@@ -328,34 +341,70 @@ init_tree:: proc(conf:Config)->Node{
 // Sends the young tree into a practical trial by app list and cheers from the sidelines.
 test_tree :: proc(menu : ^Menu, tree: ^Node){
     main_node := tree
+    add_child(main_node, new_top_bar(menu))
     app_list := new_app_list("app-list",false,menu)
     add_child(
         main_node,
         app_list)
     search := new_search_bar("search-bar",false)
-    add_border(&search,
-    Border{
-        color = color_green,
-        sides = Border_Measurements{
-            top = 10,
-            bottom = 10,
-            left = 10,
-            right = 10,
-        }
-    })
-
     search.layout = Layout{
+        direction = .Row,
+        padding = {left = 10, right = 10},
         width = Size_Value{
             mode = .Percent,
             value = 100,
         },
 
         height = Size_Value{
-            mode = .Flex,
-            value = 1
+            mode = .Pixels,
+            value = 48,
         }
     }
-    
+    add_border(&search, menu.config.search_bar_border)
+    add_child(
+        main_node,
+        search
+    )
 
+}
+
+new_top_bar :: proc(menu: ^Menu) -> Node {
+    config := &menu.config
+    bar := new_container("top-bar", true)
+    bar.color = config.top_bar_background_color
+    bar.clip_children = true
+    bar.layout = {
+        direction = .Row,
+        width = {mode = .Percent, value = 100},
+        height = {mode = .Pixels, value = 48},
+        padding = {left = 12, right = 8, top = 6, bottom = 6},
+        gap = 8,
+    }
+    add_border(&bar, config.top_bar_border)
+    title := new_text("top-bar-title", true, Text_Style{
+        text = "Thor Start",
+        color = config.top_bar_text_color,
+        font_size = config.top_bar_font_size,
+    })
+    title.layout = {width = {mode = .Flex, value = 1}, height = {mode = .Percent, value = 100}}
+    add_child(&bar, title)
+
+    button := new_container("edit-config", false)
+    button.color = config.config_button_highlighting.unhover_color
+    button.layout = {width = {mode = .Pixels, value = 124}, height = {mode = .Percent, value = 100}}
+    highlight_on_hover(&button, &config.config_button_highlighting)
+    revert_on_unhover(&button, &config.config_button_highlighting)
+    push_event(Action_Callback{event = .Event_Mouse_Pressed, node = &button, action = _press_app})
+    push_event(Action_Callback{event = .Event_Mouse_Released, node = &button, action = edit_config})
+    label := new_text("edit-config-label", true, Text_Style{
+        text = "Edit config",
+        color = config.config_button_text_color,
+        font_size = config.top_bar_font_size,
+        alignment = .center,
+    })
+    label.layout = {width = {mode = .Percent, value = 100}, height = {mode = .Percent, value = 100}}
+    add_child(&button, label)
+    add_child(&bar, button)
+    return bar
 }
 

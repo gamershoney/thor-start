@@ -85,6 +85,27 @@ wproc :: proc "system"(
         context = runtime.default_context()
 
         switch message{
+            case windows.WM_CHAR:
+                if global_state != nil && !global_state.hidden {
+                    if w_param == 22 {
+                        search_paste(global_state)
+                    } else {
+                        search_character(&global_state.search, u16(w_param))
+                    }
+                }
+                return 0
+            case windows.WM_KEYDOWN:
+                if global_state != nil && !global_state.hidden &&
+                   search_key(global_state, w_param) {
+                    return 0
+                }
+            case windows.WM_ACTIVATE:
+                if (w_param & 0xffff) == windows.WA_INACTIVE &&
+                   global_state != nil && !global_state.hidden &&
+                   global_state.menu.window.hwnd == hwnd {
+                    set_menu_hidden(true)
+                }
+                return 0
             case WM_THOR_TOGGLE_MENU:
                 toggle_menu_visibility()
                 return 0
@@ -289,7 +310,6 @@ window_init :: proc "stdcall" (config: Config)->Menu{
     return menu
 }
 
-clear_color := [4]f32{0.08,0.08,0.08,1}
 
 
 
@@ -759,7 +779,7 @@ push_frame :: proc (menu:^Menu){
     menu.window.ctx.ClearRenderTargetView(
         menu.window.ctx,
         menu.window.render_target,
-        &clear_color,
+        &menu.config.background_color,
     )
 
     for command in menu.window.vertex_renderer.commands{

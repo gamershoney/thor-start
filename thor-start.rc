@@ -1,0 +1,34 @@
+#define THOR_ICON 101
+#define RT_MANIFEST 24
+#define VS_VERSION_INFO 1
+
+THOR_ICON ICON "build\\thor-start.ico"
+1 RT_MANIFEST "thor-start.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,1,0,1
+ PRODUCTVERSION 0,1,0,1
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x2L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "Thor Start contributors"
+      VALUE "FileDescription", "Thor Start launcher"
+      VALUE "FileVersion", "0.1.0-beta.1"
+      VALUE "InternalName", "thor-start"
+      VALUE "OriginalFilename", "thor-start.exe"
+      VALUE "ProductName", "Thor Start"
+      VALUE "ProductVersion", "0.1.0-beta.1"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END

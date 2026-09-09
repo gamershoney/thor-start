@@ -4,12 +4,13 @@
         {
             "label": "Build Thor Debug",
             "type": "shell",
-            "command": "odin",
+            "command": "powershell",
             "args": [
-                "build",
-                ".",
-                "-debug",
-                "-out:thor-start.exe"
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "New-Item -ItemType Directory -Force build | Out-Null; odin build . -debug -out:build\\thor-start-debug.exe"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

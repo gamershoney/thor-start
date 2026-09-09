@@ -270,6 +270,14 @@ _launch_app :: proc(node: ^Node, data: rawptr){
     set_menu_hidden(true)
 }
 
+clear_hover_state :: proc() {
+    for listener in event_listeners {
+        if listener.event == .Event_Mouse_Unhovered && listener.node.hovered {
+            listener.action(listener.node, listener.data)
+        }
+    }
+}
+
 highlight_on_hover :: proc(node:^Node, colors: ^Hover_Unhover){
     push_event(
         Action_Callback{

@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
 
-            "program": "${workspaceFolder}\\thor-start.exe",
+            "program": "${workspaceFolder}\\build\\thor-start-debug.exe",
             "cwd": "${workspaceFolder}",
 
             "preLaunchTask": "Build Thor Debug",

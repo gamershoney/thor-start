@@ -22,6 +22,10 @@ menu_hides_only_on_deactivation :: proc(t: ^testing.T) {
     wproc(nil, windows.WM_ACTIVATE, windows.WA_INACTIVE, 0)
     testing.expect(t, state.hidden)
 
+    state.hidden = false
+    wproc(nil, windows.WM_KILLFOCUS, 0, 0)
+    testing.expect(t, state.hidden)
+
     global_state = nil
     wproc(nil, windows.WM_ACTIVATE, windows.WA_INACTIVE, 0)
 }

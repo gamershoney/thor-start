@@ -24,6 +24,7 @@ Config :: struct {
     top_bar_font_size: f32               `json:"top_bar_font_size"`,
     config_button_highlighting: Hover_Unhover `json:"config_button_highlighting"`,
     config_button_text_color: Color      `json:"config_button_text_color"`,
+    app_refresh_interval_seconds: f32    `json:"app_refresh_interval_seconds"`,
 
 }
 
@@ -56,6 +57,7 @@ default_config: Config = {
     top_bar_font_size = 15,
     config_button_highlighting = {hover_color = color_slate_hover, unhover_color = color_slate_surface},
     config_button_text_color = color_ice_accent,
+    app_refresh_interval_seconds = 300,
 }
 
 // Gives every user setting a respectable home instead of making it live beside the executable.

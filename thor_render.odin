@@ -75,14 +75,22 @@ Menu:: struct{
     window: Window
 }
 
+mouse_leave_tracking: bool
 
 // Listens to Windows messages with saintly patience and forwards the weird ones politely.
 wproc :: proc "system"(
     hwnd: windows.HWND,
     message: windows.UINT,
     w_param: windows.WPARAM,
-    l_param: windows.LPARAM)->windows.LRESULT{
+        l_param: windows.LPARAM)->windows.LRESULT{
         context = runtime.default_context()
+
+        if taskbar_created_message != 0 && message == taskbar_created_message {
+            // Explorer discarded all notification icons while restarting.
+            tray_icon_added = false
+            _ = add_tray_icon(hwnd)
+            return 0
+        }
 
         switch message{
             case windows.WM_CHAR:
@@ -104,10 +112,19 @@ wproc :: proc "system"(
                    global_state != nil && !global_state.hidden &&
                    global_state.menu.window.hwnd == hwnd {
                     set_menu_hidden(true)
+                    return 0
+                }
+            case windows.WM_KILLFOCUS:
+                if global_state != nil && !global_state.hidden &&
+                   global_state.menu.window.hwnd == hwnd {
+                    set_menu_hidden(true)
                 }
                 return 0
             case WM_THOR_TOGGLE_MENU:
                 toggle_menu_visibility()
+                return 0
+            case WM_THOR_TRAY_ICON:
+                handle_tray_callback(hwnd, l_param)
                 return 0
             case windows.WM_CLOSE:
                 windows.DestroyWindow(hwnd)
@@ -117,10 +134,21 @@ wproc :: proc "system"(
                 )
                 return 0
             case windows.WM_DESTROY:
+                remove_tray_icon(hwnd)
                 windows.PostQuitMessage(0)
                 break;
             
             case windows.WM_MOUSEMOVE:
+               if !mouse_leave_tracking {
+                   tracking := windows.TRACKMOUSEEVENT{
+                       cbSize = size_of(windows.TRACKMOUSEEVENT),
+                       dwFlags = windows.TME_LEAVE,
+                       hwndTrack = hwnd,
+                   }
+                   if windows.TrackMouseEvent(&tracking) {
+                       mouse_leave_tracking = true
+                   }
+               }
                x := cast(f32)windows.GET_X_LPARAM(l_param)
                y := cast(f32)windows.GET_Y_LPARAM(l_param)
 
@@ -129,17 +157,29 @@ wproc :: proc "system"(
                     x = x,
                     y = y,
                })
+            case windows.WM_MOUSELEAVE:
+                mouse_leave_tracking = false
+                clear_hover_state()
+                return 0
 
             case windows.WM_MOUSEWHEEL:
                 delta := f32(windows.GET_WHEEL_DELTA_WPARAM(w_param))
+                point := windows.POINT{
+                    x = windows.GET_X_LPARAM(l_param),
+                    y = windows.GET_Y_LPARAM(l_param),
+                }
+                if !windows.ScreenToClient(hwnd, &point) {
+                    return 0
+                }
 
                 signal_event(
                     Event_Mouse_Wheel{
                         delta = delta,
-                        x = cast(f32)windows.GET_X_LPARAM(l_param),
-                        y = cast(f32)windows.GET_Y_LPARAM(l_param)
+                        x = f32(point.x),
+                        y = f32(point.y),
                     }
                 )
+                return 0
             case windows.WM_LBUTTONDOWN:
                 windows.SetCapture(hwnd)
                 signal_event(
@@ -208,12 +248,16 @@ window_init :: proc "stdcall" (config: Config)->Menu{
     wc.hInstance = cast(windows.HINSTANCE)hinstance
     wc.lpszClassName = classname
     wc.hCursor = windows.LoadCursorA(nil, windows.IDC_ARROW)
+    wc.hIcon = windows.LoadIconW(
+        hinstance,
+        cast(cstring16)windows.MAKEINTRESOURCEW(101),
+    )
     windows.RegisterClassW(&wc)
 
     hwnd := windows.CreateWindowExW(
         windows.WS_EX_TOOLWINDOW |windows.WS_EX_TOPMOST,
         classname,
-        "ThorStart",
+        "Thor Start " + THOR_VERSION,
         windows.WS_POPUP,
         windows.CW_USEDEFAULT,
         windows.CW_USEDEFAULT,

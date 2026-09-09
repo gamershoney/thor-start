@@ -1,1 +1,7 @@
 *.exe
+*.obj
+*.pdb
+/build/
+/dist/
+/*.res
+/RC??????

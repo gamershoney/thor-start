@@ -110,4 +110,15 @@ launch_click_requires_release_over_pressed_node :: proc(t: ^testing.T) {
 
     testing.expect_value(t, bottom.hovered, false)
     testing.expect_value(t, top.hovered, true)
+    append(
+        &event_listeners,
+        Action_Callback{
+            event = .Event_Mouse_Unhovered,
+            node = &top,
+            action = _unhover_action,
+            data = &hover_colors,
+        },
+    )
+    clear_hover_state()
+    testing.expect_value(t, top.hovered, false)
 }

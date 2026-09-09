@@ -95,6 +95,7 @@ partial_config_keeps_unspecified_defaults :: proc(t: ^testing.T) {
     testing.expect_value(t, config.background_color, default_config.background_color)
     testing.expect_value(t, config.search_bar_background_color, default_config.search_bar_background_color)
     testing.expect_value(t, config.search_bar_border.color, default_config.search_bar_border.color)
+    testing.expect_value(t, config.app_refresh_interval_seconds, f32(300))
 }
 
 @(test)

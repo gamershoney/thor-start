@@ -73,6 +73,9 @@ taskbar_location_hook: windows.HWINEVENTHOOK
 taskbar_visibility_hook: windows.HWINEVENTHOOK
 foreground_hook: windows.HWINEVENTHOOK
 desktop_switch_hook: windows.HWINEVENTHOOK
+// Carries one taskbar click safely through Windows' surprise focus-change plot twist.
+thor_icon_click_armed: bool
+thor_icon_click_target_hidden: bool
 
 EVENT_SYSTEM_FOREGROUND :: windows.DWORD(0x0003)
 EVENT_SYSTEM_DESKTOPSWITCH :: windows.DWORD(0x0020)
@@ -80,6 +83,8 @@ EVENT_OBJECT_SHOW :: windows.DWORD(0x8002)
 EVENT_OBJECT_HIDE :: windows.DWORD(0x8003)
 EVENT_OBJECT_LOCATIONCHANGE :: windows.DWORD(0x800B)
 WM_THOR_TASKBAR_CHANGED :: windows.UINT(windows.WM_APP + 1)
+// Declines activation with the serene confidence of an icon that knows its lane.
+MA_NOACTIVATE :: windows.LRESULT(3)
 // Turns automation complaints into a distinct type that can finally feel special.
 UI_Auto_Error :: distinct string
 
@@ -511,6 +516,8 @@ stop_taskbar_tracking :: proc() {
 	}
 	thor_icon_window = nil
 	taskbar_window = nil
+	thor_icon_click_armed = false
+	thor_icon_click_target_hidden = false
 }
 
 // Reconciles the overlay geometry and stacking order after shell events.
@@ -558,7 +565,29 @@ sync_thor_icon :: proc(hwnd: windows.HWND) {
 	}
 }
 
-// Handles overlay messages while remaining calm, transparent, and above the drama.
+// Remembers the click's intent before focus changes get a chance to rewrite history.
+arm_thor_icon_click :: proc() {
+	if global_state == nil {
+		thor_icon_click_armed = false
+		return
+	}
+
+	thor_icon_click_target_hidden = !global_state.hidden
+	thor_icon_click_armed = true
+}
+
+// Finishes the promised toggle even if deactivation already hid the menu for us.
+finish_thor_icon_click :: proc() {
+	if !thor_icon_click_armed {
+		toggle_menu_visibility()
+		return
+	}
+
+	thor_icon_click_armed = false
+	set_menu_hidden(thor_icon_click_target_hidden)
+}
+
+// Handles overlay messages while staying clickable, calm, and above the drama.
 overlay :: proc "system" (
     hwnd : windows.HWND,
     umsg : windows.UINT,
@@ -571,8 +600,19 @@ overlay :: proc "system" (
 	switch umsg {
 	case WM_THOR_TASKBAR_CHANGED:
 		sync_thor_icon(hwnd)
+	case windows.WM_MOUSEACTIVATE:
+		arm_thor_icon_click()
+		return MA_NOACTIVATE
+	case windows.WM_LBUTTONDOWN:
+		if !thor_icon_click_armed {
+			arm_thor_icon_click()
+		}
+		return 0
+	case windows.WM_LBUTTONUP:
+		finish_thor_icon_click()
+		return 0
 	case windows.WM_NCHITTEST:
-		return windows.LRESULT(windows.HTTRANSPARENT)
+		return windows.LRESULT(windows.HTCLIENT)
     }
 
     return windows.DefWindowProcW(
@@ -748,8 +788,7 @@ draw_thor_icon :: proc "system" (rect: windows.RECT){
 	style := windows.WS_EX_LAYERED |
 		windows.WS_EX_TOPMOST |
 		windows.WS_EX_TOOLWINDOW |
-		windows.WS_EX_NOACTIVATE |
-		windows.WS_EX_TRANSPARENT
+		windows.WS_EX_NOACTIVATE
     classname : cstring16 = "Thor Icon Class"
     instance := windows.GetModuleHandleW(nil)
     wnd_class : windows.WNDCLASSW
